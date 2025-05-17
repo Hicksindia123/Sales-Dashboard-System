@@ -1,14 +1,7 @@
-const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwaiN2x_68OYELDCAiH6gtuNbP0vLxdOY6QmTsg0zLxHLRGsaFHi_qm2fOfhGajPl6XjDmBJrKoSvx/pub?output=csv";
-const table = document.getElementById("dataTable");
-const tbody = table.querySelector("tbody");
-const thead = table.querySelector("thead");
-const totalDiv = document.getElementById("total");
+const salesUrl = "https://script.google.com/macros/s/AKfycbz7oB-Dfl9bm8J5y3v6jeO8GJ9hpmdEu_68hjPQzwbOHY3WIzFnaF7Bb_Hrnm8NevcUZg/exec?sheet=O2P Delivery Tracking";
+const filterUrl = "https://script.google.com/macros/s/AKfycbz7oB-Dfl9bm8J5y3v6jeO8GJ9hpmdEu_68hjPQzwbOHY3WIzFnaF7Bb_Hrnm8NevcUZg/exec?sheet=Sheet12";
 
 let rawData = [];
-
-function parseCSV(text) {
-  return text.trim().split("\n").map(row => row.split(","));
-}
 
 function formatDateToISO(dateStr) {
   const parts = dateStr.split("/");
@@ -16,26 +9,27 @@ function formatDateToISO(dateStr) {
   return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
 }
 
-function populateFilters(data) {
-  const sets = { state: new Set(), city: new Set(), rep: new Set(), distributor: new Set() };
-  data.slice(1).forEach(row => {
-    sets.state.add(row[5]);
-    sets.city.add(row[4]);
-    sets.rep.add(row[6]);
-    sets.distributor.add(row[3]);
+function populateFiltersFromSheet(data) {
+  const sets = { state: [], city: [], rep: [], distributor: [] };
+  data.forEach(row => {
+    sets.distributor.push(row["Distributor"]);
+    sets.city.push(row["City"]);
+    sets.state.push(row["State"]);
+    sets.rep.push(row["Rep"]);
   });
 
-  fillSelect("stateFilter", [...sets.state]);
-  fillSelect("cityFilter", [...sets.city]);
-  fillSelect("repFilter", [...sets.rep]);
-  fillSelect("distributorFilter", [...sets.distributor]);
+  fillSelect("stateFilter", sets.state);
+  fillSelect("cityFilter", sets.city);
+  fillSelect("repFilter", sets.rep);
+  fillSelect("distributorFilter", sets.distributor);
 
   document.querySelectorAll('.tom-select').forEach(el => new TomSelect(el));
 }
 
 function fillSelect(id, options) {
   const select = document.getElementById(id);
-  options.sort().forEach(opt => {
+  select.innerHTML = '<option value="">All</option>';
+  [...new Set(options)].sort().forEach(opt => {
     const option = document.createElement("option");
     option.value = opt;
     option.textContent = opt;
@@ -51,20 +45,25 @@ function filterData() {
   const rep = (document.getElementById("repFilter").value || "").trim().toLowerCase();
   const distributor = (document.getElementById("distributorFilter").value || "").trim().toLowerCase();
 
-  const filtered = rawData.slice(1).filter(row => {
-    const formattedDate = formatDateToISO(row[1]); // Bill Date = B = index 1
+  const filtered = rawData.filter(row => {
+    const formattedDate = formatDateToISO(row["Bill Date"]);
     return (!from || formattedDate >= from) &&
            (!to || formattedDate <= to) &&
-           (!state || (row[5] || '').trim().toLowerCase() === state) &&
-           (!city || (row[4] || '').trim().toLowerCase() === city) &&
-           (!rep || (row[6] || '').trim().toLowerCase() === rep) &&
-           (!distributor || (row[3] || '').trim().toLowerCase() === distributor);
+           (!state || (row["State"] || '').trim().toLowerCase() === state) &&
+           (!city || (row["City"] || '').trim().toLowerCase() === city) &&
+           (!rep || (row["Rep"] || '').trim().toLowerCase() === rep) &&
+           (!distributor || (row["Distributor"] || '').trim().toLowerCase() === distributor);
   });
 
-  renderTable([rawData[0], ...filtered]);
+  const headers = Object.keys(rawData[0]);
+  renderTable([headers, ...filtered.map(r => headers.map(h => r[h]))]);
 }
 
 function renderTable(data) {
+  const table = document.getElementById("dataTable");
+  const thead = table.querySelector("thead");
+  const tbody = table.querySelector("tbody");
+
   thead.innerHTML = "";
   tbody.innerHTML = "";
 
@@ -86,18 +85,21 @@ function renderTable(data) {
       td.textContent = cell;
       tr.appendChild(td);
     });
-    total += parseFloat(row[2]) || 0; // Bill Amount = C = index 2
+    total += parseFloat(row[2]) || 0;
     tbody.appendChild(tr);
   });
 
-  totalDiv.textContent = `Total Sale: ₹ ${total.toLocaleString("en-IN")}`;
+  document.getElementById("total").textContent = `Total Sale: ₹ ${total.toLocaleString("en-IN")}`;
 }
 
-fetch(csvUrl)
-  .then(res => res.text())
-  .then(text => {
-    rawData = parseCSV(text);
-    populateFilters(rawData);
-    renderTable(rawData);
-    document.getElementById("applyBtn").addEventListener("click", filterData);
-  });
+Promise.all([
+  fetch(salesUrl).then(res => res.json()),
+  fetch(filterUrl).then(res => res.json())
+]).then(([salesData, filterData]) => {
+  rawData = salesData;
+  const headers = Object.keys(salesData[0]);
+  const rows = salesData.map(r => headers.map(h => r[h]));
+  populateFiltersFromSheet(filterData);
+  renderTable([headers, ...rows]);
+  document.getElementById("applyBtn").addEventListener("click", filterData);
+});
