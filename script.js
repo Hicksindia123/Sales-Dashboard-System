@@ -17,17 +17,25 @@ function formatDateToISO(dateStr) {
 }
 
 function populateFilters(data) {
-  const sets = { state: new Set(), city: new Set(), rep: new Set(), distributor: new Set() };
+  const sets = {
+    state: new Set(),
+    city: new Set(),
+    rep: new Set(),
+    distributor: new Set()
+  };
+
   data.slice(1).forEach(row => {
-    sets.state.add(row[6]);
-    sets.city.add(row[4]);
-    sets.rep.add(row[7]);
-    sets.distributor.add(row[3]);
+    sets.state.add(row[6]);        // State
+    sets.city.add(row[4]);         // City
+    sets.rep.add(row[7]);          // Rep
+    sets.distributor.add(row[3]);  // Distributor
   });
+
   fillSelect("stateFilter", [...sets.state]);
   fillSelect("cityFilter", [...sets.city]);
   fillSelect("repFilter", [...sets.rep]);
   fillSelect("distributorFilter", [...sets.distributor]);
+
   document.querySelectorAll('.tom-select').forEach(el => new TomSelect(el));
 }
 
@@ -50,7 +58,7 @@ function filterData() {
   const distributor = document.getElementById("distributorFilter").value.trim();
 
   const filtered = rawData.slice(1).filter(row => {
-    const formattedDate = formatDateToISO(row[1]);
+    const formattedDate = formatDateToISO(row[1]); // Bill Date = column B
     return (!from || formattedDate >= from) &&
            (!to || formattedDate <= to) &&
            (!state || row[6].trim() === state) &&
@@ -84,7 +92,7 @@ function renderTable(data) {
       td.textContent = cell;
       tr.appendChild(td);
     });
-    total += parseFloat(row[2]) || 0;
+    total += parseFloat(row[2]) || 0; // Bill Amount = column C
     tbody.appendChild(tr);
   });
 
