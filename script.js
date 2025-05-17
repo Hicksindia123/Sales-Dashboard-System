@@ -52,23 +52,24 @@ function fillSelect(id, options) {
 function filterData() {
   const from = document.getElementById("fromDate").value;
   const to = document.getElementById("toDate").value;
-  const state = document.getElementById("stateFilter").value.trim();
-  const city = document.getElementById("cityFilter").value.trim();
-  const rep = document.getElementById("repFilter").value.trim();
-  const distributor = document.getElementById("distributorFilter").value.trim();
+  const state = document.getElementById("stateFilter").value.trim().toUpperCase();
+  const city = document.getElementById("cityFilter").value.trim().toUpperCase();
+  const rep = document.getElementById("repFilter").value.trim().toUpperCase();
+  const distributor = document.getElementById("distributorFilter").value.trim().toUpperCase();
 
   const filtered = rawData.slice(1).filter(row => {
-    const formattedDate = formatDateToISO(row[1]); // Bill Date = column B
+    const formattedDate = formatDateToISO(row[1]);
     return (!from || formattedDate >= from) &&
            (!to || formattedDate <= to) &&
-           (!state || row[6].trim() === state) &&
-           (!city || row[4].trim() === city) &&
-           (!rep || row[7].trim() === rep) &&
-           (!distributor || row[3].trim() === distributor);
+           (!state || (row[6] || '').trim().toUpperCase() === state) &&
+           (!city || (row[4] || '').trim().toUpperCase() === city) &&
+           (!rep || (row[7] || '').trim().toUpperCase() === rep) &&
+           (!distributor || (row[3] || '').trim().toUpperCase() === distributor);
   });
 
   renderTable([rawData[0], ...filtered]);
 }
+
 
 function renderTable(data) {
   thead.innerHTML = "";
