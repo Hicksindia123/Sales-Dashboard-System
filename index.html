@@ -2,50 +2,58 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>O2P Sales Dashboard</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    label, select, input {
-      margin-right: 10px;
-      margin-bottom: 10px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: left;
-    }
-    #total {
-      font-weight: bold;
-      margin-top: 20px;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h1>O2P Sales Dashboard</h1>
+<body class="bg-gray-100 text-gray-800 p-4">
+  <div class="max-w-7xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6 text-blue-700">Sales Dashboard</h1>
 
-  <label>From: <input type="date" id="fromDate"></label>
-  <label>To: <input type="date" id="toDate"></label>
-  <label>State: <select id="stateFilter"><option value="">All</option></select></label>
-  <label>City: <select id="cityFilter"><option value="">All</option></select></label>
-  <label>Rep: <select id="repFilter"><option value="">All</option></select></label>
-  <label>Distributor: <select id="distributorFilter"><option value="">All</option></select></label>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      <label class="block">
+        <span class="text-sm text-gray-600">From</span>
+        <input type="date" id="fromDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+      </label>
+      <label class="block">
+        <span class="text-sm text-gray-600">To</span>
+        <input type="date" id="toDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+      </label>
+      <label class="block">
+        <span class="text-sm text-gray-600">State</span>
+        <select id="stateFilter" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="text-sm text-gray-600">City</span>
+        <select id="cityFilter" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="text-sm text-gray-600">Rep</span>
+        <select id="repFilter" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="text-sm text-gray-600">Distributor</span>
+        <select id="distributorFilter" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All</option>
+        </select>
+      </label>
+    </div>
 
-  <div id="total">Total Bill Amount: ₹ 0</div>
-  <table id="dataTable">
-    <thead></thead>
-    <tbody></tbody>
-  </table>
+    <div id="total" class="text-lg font-semibold text-green-700 mb-4">Total Sale: ₹ 0</div>
+
+    <div class="overflow-auto bg-white shadow rounded-lg">
+      <table id="dataTable" class="min-w-full table-auto divide-y divide-gray-200">
+        <thead class="bg-blue-600 text-white"></thead>
+        <tbody class="divide-y divide-gray-100"></tbody>
+      </table>
+    </div>
+  </div>
 
   <script>
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwaiN2x_68OYELDCAiH6gtuNbP0vLxdOY6QmTsg0zLxHLRGsaFHi_qm2fOfhGajPl6XjDmBJrKoSvx/pub?output=csv";
@@ -57,27 +65,23 @@
     let rawData = [];
 
     function parseCSV(text) {
-      const rows = text.trim().split("\n").map(row => row.split(","));
-      return rows;
+      return text.trim().split("\n").map(row => row.split(","));
     }
 
     function populateFilters(data) {
-      const stateSet = new Set();
-      const citySet = new Set();
-      const repSet = new Set();
-      const distributorSet = new Set();
+      const sets = { state: new Set(), city: new Set(), rep: new Set(), distributor: new Set() };
 
       data.slice(1).forEach(row => {
-        stateSet.add(row[1]);
-        citySet.add(row[2]);
-        repSet.add(row[3]);
-        distributorSet.add(row[4]);
+        sets.state.add(row[6]);
+        sets.city.add(row[4]);
+        sets.rep.add(row[7]);
+        sets.distributor.add(row[3]);
       });
 
-      fillSelect("stateFilter", [...stateSet]);
-      fillSelect("cityFilter", [...citySet]);
-      fillSelect("repFilter", [...repSet]);
-      fillSelect("distributorFilter", [...distributorSet]);
+      fillSelect("stateFilter", [...sets.state]);
+      fillSelect("cityFilter", [...sets.city]);
+      fillSelect("repFilter", [...sets.rep]);
+      fillSelect("distributorFilter", [...sets.distributor]);
     }
 
     function fillSelect(id, options) {
@@ -99,14 +103,14 @@
       const distributor = document.getElementById("distributorFilter").value;
 
       const filtered = rawData.slice(1).filter(row => {
-        const date = row[0];
-        const bill = parseFloat(row[5]) || 0;
-        return (!from || date >= from) &&
-               (!to || date <= to) &&
-               (!state || row[1] === state) &&
-               (!city || row[2] === city) &&
-               (!rep || row[3] === rep) &&
-               (!distributor || row[4] === distributor);
+        const dateParts = row[1].split("/");
+        const formattedDate = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
+        return (!from || formattedDate >= from) &&
+               (!to || formattedDate <= to) &&
+               (!state || row[6] === state) &&
+               (!city || row[4] === city) &&
+               (!rep || row[7] === rep) &&
+               (!distributor || row[3] === distributor);
       });
 
       renderTable([rawData[0], ...filtered]);
@@ -119,6 +123,7 @@
       const headerRow = document.createElement("tr");
       data[0].forEach(header => {
         const th = document.createElement("th");
+        th.className = "px-4 py-2 text-left text-xs font-medium uppercase tracking-wider";
         th.textContent = header;
         headerRow.appendChild(th);
       });
@@ -127,16 +132,17 @@
       let total = 0;
       data.slice(1).forEach(row => {
         const tr = document.createElement("tr");
-        row.forEach((cell, i) => {
+        row.forEach(cell => {
           const td = document.createElement("td");
+          td.className = "px-4 py-2 text-sm text-gray-700";
           td.textContent = cell;
           tr.appendChild(td);
         });
-        total += parseFloat(row[5]) || 0;
+        total += parseFloat(row[2]) || 0;
         tbody.appendChild(tr);
       });
 
-      totalDiv.textContent = `Total Bill Amount: ₹ ${total.toLocaleString("en-IN")}`;
+      totalDiv.textContent = `Total Sale: ₹ ${total.toLocaleString("en-IN")}`;
     }
 
     fetch(csvUrl)
@@ -145,7 +151,6 @@
         rawData = parseCSV(text);
         populateFilters(rawData);
         renderTable(rawData);
-
         document.querySelectorAll("select, input").forEach(input => {
           input.addEventListener("change", filterData);
         });
