@@ -2,22 +2,154 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>O2P Tracking Dashboard</title>
+  <title>O2P Sales Dashboard</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 0;
       padding: 20px;
     }
-    iframe {
+    h1 {
+      margin-bottom: 10px;
+    }
+    label, select, input {
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    table {
+      border-collapse: collapse;
       width: 100%;
-      height: 90vh;
-      border: none;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    #total {
+      font-weight: bold;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>O2P Tracking Dashboard</h1>
-  <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTwaiN2x_68OYELDCAiH6gtuNbP0vLxdOY6QmTsg0zLxHLRGsaFHi_qm2fOfhGajPl6XjDmBJrKoSvx/pubhtml?gid=1629893472&single=true"></iframe>
+  <h1>O2P Sales Dashboard</h1>
+
+  <label>From: <input type="date" id="fromDate"></label>
+  <label>To: <input type="date" id="toDate"></label>
+  <label>State: <select id="stateFilter"><option value="">All</option></select></label>
+  <label>City: <select id="cityFilter"><option value="">All</option></select></label>
+  <label>Rep: <select id="repFilter"><option value="">All</option></select></label>
+  <label>Distributor: <select id="distributorFilter"><option value="">All</option></select></label>
+
+  <div id="total">Total Bill Amount: ₹ 0</div>
+  <table id="dataTable">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwaiN2x_68OYELDCAiH6gtuNbP0vLxdOY6QmTsg0zLxHLRGsaFHi_qm2fOfhGajPl6XjDmBJrKoSvx/pub?output=csv";
+    const table = document.getElementById("dataTable");
+    const tbody = table.querySelector("tbody");
+    const thead = table.querySelector("thead");
+    const totalDiv = document.getElementById("total");
+
+    let rawData = [];
+
+    function parseCSV(text) {
+      const rows = text.trim().split("\n").map(row => row.split(","));
+      return rows;
+    }
+
+    function populateFilters(data) {
+      const stateSet = new Set();
+      const citySet = new Set();
+      const repSet = new Set();
+      const distributorSet = new Set();
+
+      data.slice(1).forEach(row => {
+        stateSet.add(row[1]);
+        citySet.add(row[2]);
+        repSet.add(row[3]);
+        distributorSet.add(row[4]);
+      });
+
+      fillSelect("stateFilter", [...stateSet]);
+      fillSelect("cityFilter", [...citySet]);
+      fillSelect("repFilter", [...repSet]);
+      fillSelect("distributorFilter", [...distributorSet]);
+    }
+
+    function fillSelect(id, options) {
+      const select = document.getElementById(id);
+      options.sort().forEach(opt => {
+        const option = document.createElement("option");
+        option.value = opt;
+        option.textContent = opt;
+        select.appendChild(option);
+      });
+    }
+
+    function filterData() {
+      const from = document.getElementById("fromDate").value;
+      const to = document.getElementById("toDate").value;
+      const state = document.getElementById("stateFilter").value;
+      const city = document.getElementById("cityFilter").value;
+      const rep = document.getElementById("repFilter").value;
+      const distributor = document.getElementById("distributorFilter").value;
+
+      const filtered = rawData.slice(1).filter(row => {
+        const date = row[0];
+        const bill = parseFloat(row[5]) || 0;
+        return (!from || date >= from) &&
+               (!to || date <= to) &&
+               (!state || row[1] === state) &&
+               (!city || row[2] === city) &&
+               (!rep || row[3] === rep) &&
+               (!distributor || row[4] === distributor);
+      });
+
+      renderTable([rawData[0], ...filtered]);
+    }
+
+    function renderTable(data) {
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+
+      const headerRow = document.createElement("tr");
+      data[0].forEach(header => {
+        const th = document.createElement("th");
+        th.textContent = header;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+
+      let total = 0;
+      data.slice(1).forEach(row => {
+        const tr = document.createElement("tr");
+        row.forEach((cell, i) => {
+          const td = document.createElement("td");
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        total += parseFloat(row[5]) || 0;
+        tbody.appendChild(tr);
+      });
+
+      totalDiv.textContent = `Total Bill Amount: ₹ ${total.toLocaleString("en-IN")}`;
+    }
+
+    fetch(csvUrl)
+      .then(res => res.text())
+      .then(text => {
+        rawData = parseCSV(text);
+        populateFilters(rawData);
+        renderTable(rawData);
+
+        document.querySelectorAll("select, input").forEach(input => {
+          input.addEventListener("change", filterData);
+        });
+      });
+  </script>
 </body>
 </html>
