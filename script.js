@@ -17,18 +17,13 @@ function formatDateToISO(dateStr) {
 }
 
 function populateFilters(data) {
-  const sets = {
-    state: new Set(),
-    city: new Set(),
-    rep: new Set(),
-    distributor: new Set()
-  };
+  const sets = { state: new Set(), city: new Set(), rep: new Set(), distributor: new Set() };
 
   data.slice(1).forEach(row => {
-    sets.state.add(row[6]);        // State
-    sets.city.add(row[4]);         // City
-    sets.rep.add(row[7]);          // Rep
-    sets.distributor.add(row[3]);  // Distributor
+    sets.state.add(row[5]);       // State
+    sets.city.add(row[4]);        // City
+    sets.rep.add(row[6]);         // Rep
+    sets.distributor.add(row[3]); // Distributor
   });
 
   fillSelect("stateFilter", [...sets.state]);
@@ -52,24 +47,23 @@ function fillSelect(id, options) {
 function filterData() {
   const from = document.getElementById("fromDate").value;
   const to = document.getElementById("toDate").value;
-  const state = document.getElementById("stateFilter").value.trim().toUpperCase();
-  const city = document.getElementById("cityFilter").value.trim().toUpperCase();
-  const rep = document.getElementById("repFilter").value.trim().toUpperCase();
-  const distributor = document.getElementById("distributorFilter").value.trim().toUpperCase();
+  const state = (document.getElementById("stateFilter").value || "").trim().toLowerCase();
+  const city = (document.getElementById("cityFilter").value || "").trim().toLowerCase();
+  const rep = (document.getElementById("repFilter").value || "").trim().toLowerCase();
+  const distributor = (document.getElementById("distributorFilter").value || "").trim().toLowerCase();
 
   const filtered = rawData.slice(1).filter(row => {
-    const formattedDate = formatDateToISO(row[1]);
+    const formattedDate = formatDateToISO(row[1]); // Bill Date
     return (!from || formattedDate >= from) &&
            (!to || formattedDate <= to) &&
-           (!state || (row[6] || '').trim().toUpperCase() === state) &&
-           (!city || (row[4] || '').trim().toUpperCase() === city) &&
-           (!rep || (row[7] || '').trim().toUpperCase() === rep) &&
-           (!distributor || (row[3] || '').trim().toUpperCase() === distributor);
+           (!state || (row[5] || '').trim().toLowerCase() === state) &&       // State = F
+           (!city || (row[4] || '').trim().toLowerCase() === city) &&         // City = E
+           (!rep || (row[6] || '').trim().toLowerCase() === rep) &&           // Rep = G
+           (!distributor || (row[3] || '').trim().toLowerCase() === distributor); // Distributor = D
   });
 
   renderTable([rawData[0], ...filtered]);
 }
-
 
 function renderTable(data) {
   thead.innerHTML = "";
@@ -106,6 +100,5 @@ fetch(csvUrl)
     rawData = parseCSV(text);
     populateFilters(rawData);
     renderTable(rawData);
-
     document.getElementById("applyBtn").addEventListener("click", filterData);
   });
