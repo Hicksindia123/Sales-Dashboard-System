@@ -18,12 +18,11 @@ function formatDateToISO(dateStr) {
 
 function populateFilters(data) {
   const sets = { state: new Set(), city: new Set(), rep: new Set(), distributor: new Set() };
-
   data.slice(1).forEach(row => {
-    sets.state.add(row[5]);       // State
-    sets.city.add(row[4]);        // City
-    sets.rep.add(row[6]);         // Rep
-    sets.distributor.add(row[3]); // Distributor
+    sets.state.add(row[5]);
+    sets.city.add(row[4]);
+    sets.rep.add(row[6]);
+    sets.distributor.add(row[3]);
   });
 
   fillSelect("stateFilter", [...sets.state]);
@@ -53,13 +52,13 @@ function filterData() {
   const distributor = (document.getElementById("distributorFilter").value || "").trim().toLowerCase();
 
   const filtered = rawData.slice(1).filter(row => {
-    const formattedDate = formatDateToISO(row[1]); // Bill Date
+    const formattedDate = formatDateToISO(row[1]); // Bill Date = B = index 1
     return (!from || formattedDate >= from) &&
            (!to || formattedDate <= to) &&
-           (!state || (row[5] || '').trim().toLowerCase() === state) &&       // State = F
-           (!city || (row[4] || '').trim().toLowerCase() === city) &&         // City = E
-           (!rep || (row[6] || '').trim().toLowerCase() === rep) &&           // Rep = G
-           (!distributor || (row[3] || '').trim().toLowerCase() === distributor); // Distributor = D
+           (!state || (row[5] || '').trim().toLowerCase() === state) &&
+           (!city || (row[4] || '').trim().toLowerCase() === city) &&
+           (!rep || (row[6] || '').trim().toLowerCase() === rep) &&
+           (!distributor || (row[3] || '').trim().toLowerCase() === distributor);
   });
 
   renderTable([rawData[0], ...filtered]);
@@ -87,7 +86,7 @@ function renderTable(data) {
       td.textContent = cell;
       tr.appendChild(td);
     });
-    total += parseFloat(row[2]) || 0; // Bill Amount = column C
+    total += parseFloat(row[2]) || 0; // Bill Amount = C = index 2
     tbody.appendChild(tr);
   });
 
