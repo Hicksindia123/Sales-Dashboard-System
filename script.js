@@ -1,5 +1,5 @@
-const salesUrl = "https://script.google.com/macros/s/AKfycbz7oB-Dfl9bm8J5y3v6jeO8GJ9hpmdEu_68hjPQzwbOHY3WIzFnaF7Bb_Hrnm8NevcUZg/exec?sheet=O2P Delivery Tracking";
-const filterUrl = "https://script.google.com/macros/s/AKfycbz7oB-Dfl9bm8J5y3v6jeO8GJ9hpmdEu_68hjPQzwbOHY3WIzFnaF7Bb_Hrnm8NevcUZg/exec?sheet=Sheet12";
+const salesUrl = https://script.google.com/macros/s/AKfycbzB488oPQwyo4mAIf13jMFJjbnaWC14AYi4ThQtNmK-lJ3xBPGNF82Yzji1T72rkcg1tA/exec
+const filterUrl = https://script.google.com/macros/s/AKfycbzB488oPQwyo4mAIf13jMFJjbnaWC14AYi4ThQtNmK-lJ3xBPGNF82Yzji1T72rkcg1tA/exec
 
 let rawData = [];
 
