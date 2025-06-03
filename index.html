@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sales Pie Charts Dashboard</title>
+  <title>Sales Pie Chart Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f9f9f9;
+      background: #f2f2f2;
       padding: 20px;
       margin: 0;
     }
@@ -21,41 +22,53 @@
 
     .filter {
       text-align: center;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
 
     .filter input {
       padding: 8px 12px;
       font-size: 14px;
-      margin: 0 10px;
+      margin: 0 8px;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
     }
 
     .charts {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 30px;
-      padding: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
     }
 
     .chart-container {
       background: white;
       padding: 20px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-height: 500px;
+      overflow-y: auto;
     }
 
     canvas {
       width: 100% !important;
       height: auto !important;
     }
+
+    h3 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
-  <h1>Sales Dashboard - Pie Charts</h1>
+  <h1>Sales Pie Chart Dashboard</h1>
 
   <div class="filter">
-    <label>From Date: <input type="date" id="fromDate"></label>
-    <label>To Date: <input type="date" id="toDate"></label>
+    <label>From Date: <input type="date" id="fromDate" /></label>
+    <label>To Date: <input type="date" id="toDate" /></label>
     <button onclick="loadData()">Load Charts</button>
   </div>
 
@@ -84,7 +97,6 @@
     function loadData() {
       const from = document.getElementById('fromDate').value;
       const to = document.getElementById('toDate').value;
-
       const url = `${API_URL}?from=${from}&to=${to}`;
 
       fetch(url)
@@ -103,27 +115,44 @@
         window[canvasId + "_chart"].destroy();
       }
 
+      // Sort & take top 10 for readability
+      const sorted = Object.entries(dataObj)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+      const labels = sorted.map(entry => entry[0]);
+      const values = sorted.map(entry => entry[1]);
+
       window[canvasId + "_chart"] = new Chart(ctx, {
         type: 'pie',
         data: {
-          labels: Object.keys(dataObj),
+          labels,
           datasets: [{
-            label: 'Sales',
-            data: Object.values(dataObj),
-            backgroundColor: Object.keys(dataObj).map(() => getRandomColor()),
+            data: values,
+            backgroundColor: labels.map(() => getRandomColor())
           }]
         },
         options: {
           responsive: true,
           plugins: {
-            legend: { position: 'bottom' }
+            legend: { position: 'bottom' },
+            datalabels: {
+              formatter: (value) => '₹' + value.toLocaleString(),
+              color: '#fff'
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ₹${ctx.raw.toLocaleString()}`
+              }
+            }
           }
-        }
+        },
+        plugins: [ChartDataLabels]
       });
     }
 
     function getRandomColor() {
-      const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#8E44AD', '#1ABC9C', '#E67E22', '#2ECC71'];
+      const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#2ECC71', '#E67E22', '#9B59B6', '#1ABC9C'];
       return colors[Math.floor(Math.random() * colors.length)];
     }
   </script>
