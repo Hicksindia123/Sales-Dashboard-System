@@ -15,13 +15,15 @@
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #f4f4f4;
-      margin: 0;
       padding: 20px;
+      margin: 0;
     }
+
     h1 {
       text-align: center;
       margin-bottom: 20px;
     }
+
     .filters {
       display: flex;
       flex-wrap: wrap;
@@ -29,47 +31,63 @@
       gap: 12px;
       margin-bottom: 20px;
     }
+
     .filters input, .filters select {
       padding: 6px;
       font-size: 14px;
       width: 180px;
     }
+
     button {
       padding: 6px 14px;
       font-size: 14px;
+      cursor: pointer;
     }
+
     .charts {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
       gap: 20px;
       margin-bottom: 40px;
     }
+
     .chart-container {
       background: white;
       padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       max-height: 500px;
       overflow-y: auto;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
       background: white;
     }
+
     th, td {
       border: 1px solid #ddd;
       padding: 8px;
       font-size: 14px;
     }
+
     th {
       background: #007acc;
       color: white;
       position: sticky;
       top: 0;
     }
+
     tr:nth-child(even) {
       background: #f9f9f9;
+    }
+
+    #noData {
+      text-align: center;
+      font-style: italic;
+      color: #999;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -93,7 +111,7 @@
     <div class="chart-container"><h3>Rep Wise Sales</h3><canvas id="repChart"></canvas></div>
   </div>
 
-  <h2>Filtered Sales Data</h2>
+  <h2>Sales Data</h2>
   <table id="dataTable">
     <thead>
       <tr>
@@ -107,19 +125,19 @@
     </thead>
     <tbody></tbody>
   </table>
+  <div id="noData"></div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbw7ZVSSytDWuL1OeUSHFgDnXPwRQvQFVr0JVTgeyf0KTKOKQCyr195drGhZ9xN0N9Htyg/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxbY93cuHBqmOll-awcgCixukIUi4533LFnuCMJIqIMWrKsDpICkDfpoSX1isYMiLhJwQ/exec";
     let fullData = [];
 
     function loadData() {
       const from = document.getElementById('fromDate').value;
       const to = document.getElementById('toDate').value;
-
       fetch(`${API_URL}?from=${from}&to=${to}`)
         .then(res => res.json())
         .then(data => {
-          fullData = data.rawData;
+          fullData = data.rawData || [];
           populateFilters(fullData);
           renderEverything();
         });
@@ -225,7 +243,15 @@
 
     function renderTable(data) {
       const tbody = document.querySelector("#dataTable tbody");
+      const noData = document.getElementById("noData");
       tbody.innerHTML = "";
+      if (data.length === 0) {
+        noData.textContent = "No data found for selected filters.";
+        return;
+      } else {
+        noData.textContent = "";
+      }
+
       data.forEach(row => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
