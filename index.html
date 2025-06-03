@@ -2,47 +2,130 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sales Dashboard</title>
-
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.2.2/css/tom-select.min.css" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sales Pie Charts Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      padding: 20px;
+      margin: 0;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #333;
+    }
+
+    .filter {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .filter input {
+      padding: 8px 12px;
+      font-size: 14px;
+      margin: 0 10px;
+    }
+
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      padding: 10px;
+    }
+
+    .chart-container {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-800 p-4">
-  <div class="max-w-7xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-blue-700">Sales Dashboard</h1>
+<body>
+  <h1>Sales Dashboard - Pie Charts</h1>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-      <label><span>From</span><input type="date" id="fromDate" class="filter-input" /></label>
-      <label><span>To</span><input type="date" id="toDate" class="filter-input" /></label>
-      <label><span>State</span><select id="stateFilter" class="filter-input tom-select"><option value="">All</option></select></label>
-      <label><span>City</span><select id="cityFilter" class="filter-input tom-select"><option value="">All</option></select></label>
-      <label><span>Rep</span><select id="repFilter" class="filter-input tom-select"><option value="">All</option></select></label>
-      <label><span>Distributor</span><select id="distributorFilter" class="filter-input tom-select"><option value="">All</option></select></label>
+  <div class="filter">
+    <label>From Date: <input type="date" id="fromDate"></label>
+    <label>To Date: <input type="date" id="toDate"></label>
+    <button onclick="loadData()">Load Charts</button>
+  </div>
+
+  <div class="charts">
+    <div class="chart-container">
+      <h3>City Wise Sales</h3>
+      <canvas id="cityChart"></canvas>
     </div>
-
-    <div class="mb-4">
-      <button id="applyBtn" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Apply Filters</button>
+    <div class="chart-container">
+      <h3>Distributor Wise Sales</h3>
+      <canvas id="distributorChart"></canvas>
     </div>
-
-    <div id="total" class="text-lg font-semibold text-green-700 mb-4">Total Sale: ₹ 0</div>
-
-    <div class="overflow-auto bg-white shadow rounded-lg mb-6">
-      <table id="dataTable" class="min-w-full table-auto divide-y divide-gray-200">
-        <thead class="bg-blue-600 text-white"></thead>
-        <tbody class="divide-y divide-gray-100"></tbody>
-      </table>
+    <div class="chart-container">
+      <h3>State Wise Sales</h3>
+      <canvas id="stateChart"></canvas>
     </div>
-
-    <div class="bg-white shadow rounded-lg p-4">
-      <h2 class="text-xl font-semibold mb-4 text-blue-600">Sales by State</h2>
-      <canvas id="stateChart" height="100"></canvas>
+    <div class="chart-container">
+      <h3>Rep Wise Sales</h3>
+      <canvas id="repChart"></canvas>
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.2.2/js/tom-select.complete.min.js"></script>
-  <script src="script.js"></script>
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycby5X-hNiVY_tSKXeDtQRdwCMHL6WqpTzes2jl9tSBnk-UnMlKk_NhYjN2shCJLcbTO12g/exec";
+
+    function loadData() {
+      const from = document.getElementById('fromDate').value;
+      const to = document.getElementById('toDate').value;
+
+      const url = `${API_URL}?from=${from}&to=${to}`;
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          drawPieChart(data.cityWise, 'cityChart');
+          drawPieChart(data.distributorWise, 'distributorChart');
+          drawPieChart(data.stateWise, 'stateChart');
+          drawPieChart(data.repWise, 'repChart');
+        });
+    }
+
+    function drawPieChart(dataObj, canvasId) {
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      if (window[canvasId + "_chart"]) {
+        window[canvasId + "_chart"].destroy();
+      }
+
+      window[canvasId + "_chart"] = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(dataObj),
+          datasets: [{
+            label: 'Sales',
+            data: Object.values(dataObj),
+            backgroundColor: Object.keys(dataObj).map(() => getRandomColor()),
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+
+    function getRandomColor() {
+      const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#8E44AD', '#1ABC9C', '#E67E22', '#2ECC71'];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+  </script>
 </body>
 </html>
