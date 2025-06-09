@@ -21,7 +21,7 @@
     .filter-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
     .filter-group label { display: flex; flex-direction: column; font-weight: bold; }
     .chart-section { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
-    canvas { background: white; border-radius: 8px; padding: 10px; width: 48% !important; height: 300px !important; }
+    canvas { background: white; border-radius: 8px; padding: 10px; width: 48% !important; height: 400px !important; }
     table {
       width: 100%; border-collapse: collapse; background: white;
     }
@@ -29,9 +29,6 @@
       border: 1px solid #ccc; padding: 8px; text-align: left;
     }
     th { background: #007BFF; color: white; }
-    .legend-container { max-height: 100px; overflow: hidden; position: relative; }
-    .legend-container.expanded { max-height: none; }
-    .toggle-legend { cursor: pointer; color: #007BFF; text-align: center; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -56,11 +53,7 @@
 </div>
 
 <div class="chart-section">
-  <div>
-    <canvas id="statePie"></canvas>
-    <div class="legend-container" id="stateLegend"></div>
-    <div class="toggle-legend" onclick="toggleLegend()">Show More ▼</div>
-  </div>
+  <canvas id="statePie"></canvas>
   <canvas id="repBar"></canvas>
 </div>
 
@@ -80,8 +73,7 @@
 </table>
 
 <script>
-  let repList = [], cityList = [], distributorList = [], stateList = [];
-  let stateChart;
+  let repList = [], cityList = [], distributorList = [], stateList = [], stateChart, repChart;
 
   function loadData() {
     const from = document.getElementById("fromDate").value;
@@ -101,16 +93,16 @@
         enableAutocomplete();
 
         let filtered = data.rawData.filter(row =>
-          row.rep.toLowerCase().includes(repFilter) &&
-          row.city.toLowerCase().includes(cityFilter) &&
-          row.state.toLowerCase().includes(stateFilter) &&
-          row.distributor.toLowerCase().includes(distributorFilter)
+          (!repFilter || row.rep.toLowerCase().includes(repFilter)) &&
+          (!cityFilter || row.city.toLowerCase().includes(cityFilter)) &&
+          (!stateFilter || row.state.toLowerCase().includes(stateFilter)) &&
+          (!distributorFilter || row.distributor.toLowerCase().includes(distributorFilter))
         );
 
         renderTable(filtered);
         renderSummary(filtered);
-        renderPieChart(data.stateWise);
-        renderBarChart(data.repWise);
+        renderPieChart(filtered);
+        renderBarChart(filtered);
       });
   }
 
@@ -152,47 +144,67 @@
   function renderPieChart(data) {
     const ctx = document.getElementById('statePie').getContext('2d');
     if (stateChart) stateChart.destroy();
-    const colors = Object.keys(data).map(() => `hsl(${Math.random()*360}, 70%, 70%)`);
+
+    const stateSales = {};
+    data.forEach(row => {
+      stateSales[row.state] = (stateSales[row.state] || 0) + Number(row.billAmount);
+    });
+
+    const labels = Object.keys(stateSales);
+    const values = Object.values(stateSales);
+    const colors = labels.map(() => `hsl(${Math.random()*360}, 70%, 70%)`);
+
     stateChart = new Chart(ctx, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
-        labels: Object.keys(data),
+        labels,
         datasets: [{
-          data: Object.values(data),
+          data: values,
           backgroundColor: colors
         }]
       },
-      options: { responsive: true, plugins: { legend: { display: false } } }
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'right'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return `${context.label} - ₹${context.raw.toLocaleString()}`;
+              }
+            }
+          }
+        }
+      }
     });
-
-    const legendHtml = Object.entries(data).map(([state, value], index) => `
-      <div><span style="display:inline-block;width:12px;height:12px;background-color:${colors[index]};margin-right:5px;"></span>
-      ${state} - ₹${value}</div>
-    `).join('');
-    document.getElementById("stateLegend").innerHTML = legendHtml;
   }
 
   function renderBarChart(data) {
     const ctx = document.getElementById('repBar').getContext('2d');
-    new Chart(ctx, {
+    if (repChart) repChart.destroy();
+
+    const repSales = {};
+    data.forEach(row => {
+      repSales[row.rep] = (repSales[row.rep] || 0) + Number(row.billAmount);
+    });
+
+    const labels = Object.keys(repSales);
+    const values = Object.values(repSales);
+
+    repChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: Object.keys(data),
+        labels,
         datasets: [{
           label: 'Rep Wise Sales',
-          data: Object.values(data),
+          data: values,
           backgroundColor: 'skyblue'
         }]
       },
       options: { responsive: true }
     });
-  }
-
-  function toggleLegend() {
-    const container = document.getElementById("stateLegend");
-    container.classList.toggle("expanded");
-    const toggle = document.querySelector(".toggle-legend");
-    toggle.innerText = container.classList.contains("expanded") ? "Show Less ▲" : "Show More ▼";
   }
 </script>
 
