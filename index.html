@@ -1,95 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sales Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-  <style>
-    body { font-family: Arial; padding: 20px; background: #f3f3f3; }
-    .metrics { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; }
-    .metric-card {
-      background: white;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px #ccc;
-      width: 23%;
-      text-align: center;
-    }
-    .filter-group { margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-    select { min-width: 150px; }
-    canvas { margin-bottom: 20px; background: white; border-radius: 8px; padding: 10px; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; background: white; }
-    th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
-    th { background: #007BFF; color: white; }
-    .summary-tables { display: flex; gap: 20px; flex-wrap: wrap; }
-    .summary-box { width: 300px; max-height: 300px; overflow-y: auto; }
-    .summary-box table { width: 100%; }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-100 p-6">
 
-<h2>Sales Dashboard</h2>
+  <h2 class="text-2xl font-bold mb-4">Sales Dashboard</h2>
 
-<div class="metrics">
-  <div class="metric-card" id="totalSale">Total Sale: ₹0</div>
-  <div class="metric-card" id="avgSale">Average Sale: ₹0</div>
-  <div class="metric-card" id="maxSale">Max Sale: ₹0</div>
-  <div class="metric-card" id="billCount">Total Bills: 0</div>
-</div>
-
-<div class="filter-group">
-  <label>From: <input type="date" id="fromDate"></label>
-  <label>To: <input type="date" id="toDate"></label>
-  <label>Rep: <select id="repFilter" multiple></select></label>
-  <label>City: <select id="cityFilter" multiple></select></label>
-  <label>State: <select id="stateFilter" multiple></select></label>
-  <label>Distributor: <select id="distributorFilter" multiple></select></label>
-  <button onclick="loadData()">Load</button>
-</div>
-
-<canvas id="repBar" height="300"></canvas>
-
-<div class="summary-tables">
-  <div class="summary-box">
-    <table>
-      <thead><tr><th>State</th><th>Total Sale</th></tr></thead>
-      <tbody id="stateSummary"></tbody>
-    </table>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow p-4 text-center" id="totalSale">Total Sale: ₹0</div>
+    <div class="bg-white rounded-xl shadow p-4 text-center" id="avgSale">Average Sale: ₹0</div>
+    <div class="bg-white rounded-xl shadow p-4 text-center" id="maxSale">Max Sale: ₹0</div>
+    <div class="bg-white rounded-xl shadow p-4 text-center" id="billCount">Total Bills: 0</div>
   </div>
-  <div class="summary-box">
-    <table>
-      <thead><tr><th>City</th><th>Total Sale</th></tr></thead>
-      <tbody id="citySummary"></tbody>
-    </table>
-  </div>
-  <div class="summary-box">
-    <table>
-      <thead><tr><th>Distributor</th><th>Total Sale</th></tr></thead>
-      <tbody id="distributorSummary"></tbody>
-    </table>
-  </div>
-</div>
 
-<table id="salesTable">
-  <thead>
-    <tr>
-      <th>Bill No.</th>
-      <th>Bill Date</th>
-      <th>Bill Amount</th>
-      <th>Distributor</th>
-      <th>City</th>
-      <th>State</th>
-      <th>Rep</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+  <div class="flex flex-wrap gap-4 mb-6 items-end">
+    <div><label class="block font-medium">From:<input type="date" id="fromDate" class="mt-1 p-2 rounded border w-44"></label></div>
+    <div><label class="block font-medium">To:<input type="date" id="toDate" class="mt-1 p-2 rounded border w-44"></label></div>
+    <div><label class="block font-medium">Rep:<select id="repFilter" multiple class="w-44"></select></label></div>
+    <div><label class="block font-medium">City:<select id="cityFilter" multiple class="w-44"></select></label></div>
+    <div><label class="block font-medium">State:<select id="stateFilter" multiple class="w-44"></select></label></div>
+    <div><label class="block font-medium">Distributor:<select id="distributorFilter" multiple class="w-44"></select></label></div>
+    <button onclick="loadData()" class="bg-blue-600 text-white px-4 py-2 rounded shadow">Load</button>
+  </div>
+
+  <div class="bg-white rounded-xl shadow p-4 mb-6">
+    <canvas id="repBar" height="200"></canvas>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-72">
+      <h3 class="font-semibold mb-2">State-wise Sales</h3>
+      <table class="w-full text-sm">
+        <thead><tr><th>State</th><th>Total Sale</th></tr></thead>
+        <tbody id="stateSummary"></tbody>
+      </table>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-72">
+      <h3 class="font-semibold mb-2">City-wise Sales</h3>
+      <table class="w-full text-sm">
+        <thead><tr><th>City</th><th>Total Sale</th></tr></thead>
+        <tbody id="citySummary"></tbody>
+      </table>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-72">
+      <h3 class="font-semibold mb-2">Distributor-wise Sales</h3>
+      <table class="w-full text-sm">
+        <thead><tr><th>Distributor</th><th>Total Sale</th></tr></thead>
+        <tbody id="distributorSummary"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow p-4">
+    <h3 class="font-semibold mb-2">Detailed Sales Data</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr><th>Bill No.</th><th>Bill Date</th><th>Bill Amount</th><th>Distributor</th><th>City</th><th>State</th><th>Rep</th></tr>
+        </thead>
+        <tbody id="salesTableBody"></tbody>
+      </table>
+    </div>
+  </div>
 
 <script>
   let repChart;
-
   function loadData() {
     const from = $('#fromDate').val();
     const to = $('#toDate').val();
@@ -128,16 +111,13 @@
     const u = Array.from(new Set(list.sort()));
     const el = $(selector).empty();
     u.forEach(v=> el.append(`<option>${v}</option>`));
-    el.select2({ width: '150px', placeholder: 'Select' });
+    el.select2({ width: '100%', placeholder: 'Select' });
   }
 
   function renderTable(data) {
-    const tbody = $('#salesTable tbody').empty();
+    const tbody = $('#salesTableBody').empty();
     data.forEach(r => tbody.append(`
-      <tr>
-        <td>${r.billNo}</td><td>${r.billDate}</td><td>${r.billAmount}</td>
-        <td>${r.distributor}</td><td>${r.city}</td><td>${r.state}</td><td>${r.rep}</td>
-      </tr>`));
+      <tr><td>${r.billNo}</td><td>${r.billDate}</td><td>${r.billAmount}</td><td>${r.distributor}</td><td>${r.city}</td><td>${r.state}</td><td>${r.rep}</td></tr>`));
   }
 
   function renderBar(data) {
@@ -148,8 +128,8 @@
     if (repChart) repChart.destroy();
     repChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels, datasets: [{ data: values, label: 'Sales', backgroundColor: '#42A5F5' }] },
-      options: { responsive: true, plugins: { legend: { display: false } } }
+      data: { labels, datasets: [{ data: values, label: 'Sales', backgroundColor: '#3B82F6' }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { autoSkip: false, maxRotation: 90, minRotation: 45 } } } }
     });
   }
 
@@ -160,9 +140,9 @@
       c[r.city] = (c[r.city]||0)+Number(r.billAmount);
       d[r.distributor] = (d[r.distributor]||0)+Number(r.billAmount);
     });
-    sortAndFill(s, '#stateSummary');
-    sortAndFill(c, '#citySummary');
-    sortAndFill(d, '#distributorSummary');
+    sortAndFill(s,'#stateSummary');
+    sortAndFill(c,'#citySummary');
+    sortAndFill(d,'#distributorSummary');
   }
 
   function renderMetrics(data) {
@@ -183,6 +163,5 @@
 
   $(document).ready(loadData);
 </script>
-
 </body>
 </html>
