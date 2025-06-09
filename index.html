@@ -8,11 +8,21 @@
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <style>
     body { font-family: Arial; padding: 20px; background: #f3f3f3; }
-    .filter-group { margin-bottom: 20px; }
+    .metrics { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; }
+    .metric-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px #ccc;
+      width: 23%;
+      text-align: center;
+    }
+    .filter-group { margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
     select { min-width: 150px; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+    canvas { margin-bottom: 20px; background: white; border-radius: 8px; padding: 10px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; background: white; }
     th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
-    thead th { background: #007BFF; color: white; }
+    th { background: #007BFF; color: white; }
     .summary-tables { display: flex; gap: 20px; flex-wrap: wrap; }
     .summary-box { width: 300px; max-height: 300px; overflow-y: auto; }
     .summary-box table { width: 100%; }
@@ -22,17 +32,24 @@
 
 <h2>Sales Dashboard</h2>
 
+<div class="metrics">
+  <div class="metric-card" id="totalSale">Total Sale: ₹0</div>
+  <div class="metric-card" id="avgSale">Average Sale: ₹0</div>
+  <div class="metric-card" id="maxSale">Max Sale: ₹0</div>
+  <div class="metric-card" id="billCount">Total Bills: 0</div>
+</div>
+
 <div class="filter-group">
-  From: <input type="date" id="fromDate">
-  To: <input type="date" id="toDate">
-  Rep: <select id="repFilter" multiple></select>
-  City: <select id="cityFilter" multiple></select>
-  State: <select id="stateFilter" multiple></select>
-  Distributor: <select id="distributorFilter" multiple></select>
+  <label>From: <input type="date" id="fromDate"></label>
+  <label>To: <input type="date" id="toDate"></label>
+  <label>Rep: <select id="repFilter" multiple></select></label>
+  <label>City: <select id="cityFilter" multiple></select></label>
+  <label>State: <select id="stateFilter" multiple></select></label>
+  <label>Distributor: <select id="distributorFilter" multiple></select></label>
   <button onclick="loadData()">Load</button>
 </div>
 
-<div><canvas id="repBar" width="600" height="300"></canvas></div>
+<canvas id="repBar" height="300"></canvas>
 
 <div class="summary-tables">
   <div class="summary-box">
@@ -85,13 +102,11 @@
       .then(r => r.json())
       .then(data => {
         const raw = data.rawData;
-        // Populate filter lists
         populateFilter('#repFilter', raw.map(r=>r.rep));
         populateFilter('#cityFilter', raw.map(r=>r.city));
         populateFilter('#stateFilter', raw.map(r=>r.state));
         populateFilter('#distributorFilter', raw.map(r=>r.distributor));
 
-        // Filter data
         const filtered = raw.filter(r => {
           const dt = new Date(r.billDate+'T00:00:00');
           return (!from || dt >= new Date(from+'T00:00:00')) &&
@@ -105,6 +120,7 @@
         renderTable(filtered);
         renderBar(filtered);
         renderSummaries(filtered);
+        renderMetrics(filtered);
       });
   }
 
@@ -127,13 +143,13 @@
   function renderBar(data) {
     const sales = {};
     data.forEach(r => sales[r.rep] = (sales[r.rep]||0)+Number(r.billAmount));
-    const labels = Object.keys(sales), values=Object.values(sales);
+    const labels = Object.keys(sales), values = Object.values(sales);
     const ctx = document.getElementById('repBar').getContext('2d');
     if (repChart) repChart.destroy();
     repChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels, datasets:[{ data: values, backgroundColor:'skyblue' }] },
-      options: { responsive:true }
+      data: { labels, datasets: [{ data: values, label: 'Sales', backgroundColor: '#42A5F5' }] },
+      options: { responsive: true, plugins: { legend: { display: false } } }
     });
   }
 
@@ -144,9 +160,19 @@
       c[r.city] = (c[r.city]||0)+Number(r.billAmount);
       d[r.distributor] = (d[r.distributor]||0)+Number(r.billAmount);
     });
-    sortAndFill(s,'#stateSummary');
-    sortAndFill(c,'#citySummary');
-    sortAndFill(d,'#distributorSummary');
+    sortAndFill(s, '#stateSummary');
+    sortAndFill(c, '#citySummary');
+    sortAndFill(d, '#distributorSummary');
+  }
+
+  function renderMetrics(data) {
+    const total = data.reduce((sum, r) => sum + Number(r.billAmount), 0);
+    const avg = data.length ? total / data.length : 0;
+    const max = Math.max(...data.map(r => Number(r.billAmount)), 0);
+    $('#totalSale').text(`Total Sale: ₹${total.toLocaleString()}`);
+    $('#avgSale').text(`Average Sale: ₹${avg.toFixed(2)}`);
+    $('#maxSale').text(`Max Sale: ₹${max.toLocaleString()}`);
+    $('#billCount').text(`Total Bills: ${data.length}`);
   }
 
   function sortAndFill(obj, sel) {
