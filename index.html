@@ -5,7 +5,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-  <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" />
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f3f3f3; }
     .metrics { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
@@ -18,8 +19,9 @@
       width: 23%;
       text-align: center;
     }
-    .filter-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .filter-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: flex-end; }
     .filter-group label { display: flex; flex-direction: column; font-weight: bold; }
+    .filter-group select, .filter-group input { min-width: 150px; padding: 5px; }
     .chart-section { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
     canvas { background: white; border-radius: 8px; padding: 10px; width: 48% !important; height: 400px !important; }
     table {
@@ -45,10 +47,10 @@
 <div class="filter-group">
   <label>From Date <input type="date" id="fromDate"></label>
   <label>To Date <input type="date" id="toDate"></label>
-  <label>Rep <input type="text" id="repFilter" class="autocomplete"></label>
-  <label>City <input type="text" id="cityFilter" class="autocomplete"></label>
-  <label>State <input type="text" id="stateFilter" class="autocomplete"></label>
-  <label>Distributor <input type="text" id="distributorFilter" class="autocomplete"></label>
+  <label>Rep <select id="repFilter" multiple></select></label>
+  <label>City <select id="cityFilter" multiple></select></label>
+  <label>State <select id="stateFilter" multiple></select></label>
+  <label>Distributor <select id="distributorFilter" multiple></select></label>
   <button onclick="loadData()">Load</button>
 </div>
 
@@ -76,28 +78,32 @@
   let repList = [], cityList = [], distributorList = [], stateList = [], stateChart, repChart;
 
   function loadData() {
-    const from = document.getElementById("fromDate").value;
-    const to = document.getElementById("toDate").value;
-    const repFilter = document.getElementById("repFilter").value.toLowerCase();
-    const cityFilter = document.getElementById("cityFilter").value.toLowerCase();
-    const stateFilter = document.getElementById("stateFilter").value.toLowerCase();
-    const distributorFilter = document.getElementById("distributorFilter").value.toLowerCase();
+    const from = new Date(document.getElementById("fromDate").value);
+    const to = new Date(document.getElementById("toDate").value);
+    to.setHours(23, 59, 59, 999); // include full day of 'to' date
 
-    fetch(`https://script.google.com/macros/s/AKfycbzP8wroEEmje9M-fQfQZL3xOl01ilmgXG6vWR4gS_8mqQf1sj4nGmtoOqQzSeskHetXEA/exec?from=${from}&to=${to}`)
+    const repFilter = $("#repFilter").val();
+    const cityFilter = $("#cityFilter").val();
+    const stateFilter = $("#stateFilter").val();
+    const distributorFilter = $("#distributorFilter").val();
+
+    fetch(`https://script.google.com/macros/s/AKfycbzP8wroEEmje9M-fQfQZL3xOl01ilmgXG6vWR4gS_8mqQf1sj4nGmtoOqQzSeskHetXEA/exec?from=${from.toISOString().split('T')[0]}&to=${to.toISOString().split('T')[0]}`)
       .then(res => res.json())
       .then(data => {
         repList = [...new Set(data.rawData.map(r => r.rep))];
         cityList = [...new Set(data.rawData.map(r => r.city))];
         stateList = [...new Set(data.rawData.map(r => r.state))];
         distributorList = [...new Set(data.rawData.map(r => r.distributor))];
-        enableAutocomplete();
+        enableMultiSelect();
 
-        let filtered = data.rawData.filter(row =>
-          (!repFilter || row.rep.toLowerCase().includes(repFilter)) &&
-          (!cityFilter || row.city.toLowerCase().includes(cityFilter)) &&
-          (!stateFilter || row.state.toLowerCase().includes(stateFilter)) &&
-          (!distributorFilter || row.distributor.toLowerCase().includes(distributorFilter))
-        );
+        let filtered = data.rawData.filter(row => {
+          const rowDate = new Date(row.billDate);
+          return (!repFilter.length || repFilter.includes(row.rep)) &&
+                 (!cityFilter.length || cityFilter.includes(row.city)) &&
+                 (!stateFilter.length || stateFilter.includes(row.state)) &&
+                 (!distributorFilter.length || distributorFilter.includes(row.distributor)) &&
+                 (!isNaN(rowDate) && rowDate >= from && rowDate <= to);
+        });
 
         renderTable(filtered);
         renderSummary(filtered);
@@ -106,11 +112,27 @@
       });
   }
 
-  function enableAutocomplete() {
-    $("#repFilter").autocomplete({ source: repList });
-    $("#cityFilter").autocomplete({ source: cityList });
-    $("#stateFilter").autocomplete({ source: stateList });
-    $("#distributorFilter").autocomplete({ source: distributorList });
+  function enableMultiSelect() {
+    ["#repFilter", "#cityFilter", "#stateFilter", "#distributorFilter"].forEach(selector => {
+      if (!$(selector).hasClass("select2-hidden-accessible")) {
+        $(selector).select2({ width: '150px' });
+      }
+    });
+    setOptions("#repFilter", repList);
+    setOptions("#cityFilter", cityList);
+    setOptions("#stateFilter", stateList);
+    setOptions("#distributorFilter", distributorList);
+  }
+
+  function setOptions(selector, list) {
+    const select = document.querySelector(selector);
+    select.innerHTML = "";
+    list.forEach(val => {
+      const option = document.createElement("option");
+      option.value = val;
+      option.text = val;
+      select.appendChild(option);
+    });
   }
 
   function renderTable(data) {
@@ -158,10 +180,7 @@
       type: 'doughnut',
       data: {
         labels,
-        datasets: [{
-          data: values,
-          backgroundColor: colors
-        }]
+        datasets: [{ data: values, backgroundColor: colors }]
       },
       options: {
         responsive: true,
@@ -171,9 +190,7 @@
           },
           tooltip: {
             callbacks: {
-              label: function(context) {
-                return `${context.label} - ₹${context.raw.toLocaleString()}`;
-              }
+              label: ctx => `${ctx.label} - ₹${ctx.raw.toLocaleString()}`
             }
           }
         }
@@ -197,11 +214,7 @@
       type: 'bar',
       data: {
         labels,
-        datasets: [{
-          label: 'Rep Wise Sales',
-          data: values,
-          backgroundColor: 'skyblue'
-        }]
+        datasets: [{ label: 'Rep Wise Sales', data: values, backgroundColor: 'skyblue' }]
       },
       options: { responsive: true }
     });
