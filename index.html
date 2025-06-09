@@ -74,7 +74,7 @@
     const cityFilter = document.getElementById("cityFilter").value.toLowerCase();
     const distributorFilter = document.getElementById("distributorFilter").value.toLowerCase();
 
-    fetch(`https://script.google.com/macros/s/AKfycbxxHTfygBC8UcMP2x-TWit1H_M0ut4ZtSevtXjZdLVUoGiwNWCOkNsrWaMj8f5jh1j5WA/exec?from=${from}&to=${to}`)
+    fetch(`https://script.google.com/macros/s/AKfycbzP8wroEEmje9M-fQfQZL3xOl01ilmgXG6vWR4gS_8mqQf1sj4nGmtoOqQzSeskHetXEA/exec?from=${from}&to=${to}`)
       .then(res => res.json())
       .then(data => {
         let filtered = data.rawData.filter(row =>
