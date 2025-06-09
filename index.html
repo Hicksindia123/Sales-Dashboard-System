@@ -4,9 +4,8 @@
   <title>Sales Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f3f3f3; }
     .metrics { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
@@ -21,7 +20,6 @@
     }
     .filter-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: flex-end; }
     .filter-group label { display: flex; flex-direction: column; font-weight: bold; }
-    .filter-group select, .filter-group input { min-width: 150px; padding: 5px; }
     .chart-section { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
     canvas { background: white; border-radius: 8px; padding: 10px; width: 48% !important; height: 400px !important; }
     table {
@@ -31,6 +29,7 @@
       border: 1px solid #ccc; padding: 8px; text-align: left;
     }
     th { background: #007BFF; color: white; }
+    select { min-width: 180px; }
   </style>
 </head>
 <body>
@@ -75,150 +74,154 @@
 </table>
 
 <script>
-  let repList = [], cityList = [], distributorList = [], stateList = [], stateChart, repChart;
+let repList = [], cityList = [], distributorList = [], stateList = [], stateChart, repChart;
 
-  function loadData() {
-    const from = new Date(document.getElementById("fromDate").value);
-    const to = new Date(document.getElementById("toDate").value);
-    to.setHours(23, 59, 59, 999); // include full day of 'to' date
+function loadData() {
+  const fromInput = document.getElementById("fromDate").value;
+  const toInput = document.getElementById("toDate").value;
 
-    const repFilter = $("#repFilter").val();
-    const cityFilter = $("#cityFilter").val();
-    const stateFilter = $("#stateFilter").val();
-    const distributorFilter = $("#distributorFilter").val();
+  const from = fromInput ? new Date(fromInput + 'T00:00:00') : null;
+  const to = toInput ? new Date(toInput + 'T23:59:59') : null;
 
-    fetch(`https://script.google.com/macros/s/AKfycbzP8wroEEmje9M-fQfQZL3xOl01ilmgXG6vWR4gS_8mqQf1sj4nGmtoOqQzSeskHetXEA/exec?from=${from.toISOString().split('T')[0]}&to=${to.toISOString().split('T')[0]}`)
-      .then(res => res.json())
-      .then(data => {
-        repList = [...new Set(data.rawData.map(r => r.rep))];
-        cityList = [...new Set(data.rawData.map(r => r.city))];
-        stateList = [...new Set(data.rawData.map(r => r.state))];
-        distributorList = [...new Set(data.rawData.map(r => r.distributor))];
-        enableMultiSelect();
+  const repFilter = $("#repFilter").val() || [];
+  const cityFilter = $("#cityFilter").val() || [];
+  const stateFilter = $("#stateFilter").val() || [];
+  const distributorFilter = $("#distributorFilter").val() || [];
 
-        let filtered = data.rawData.filter(row => {
-          const rowDate = new Date(row.billDate);
-          return (!repFilter.length || repFilter.includes(row.rep)) &&
-                 (!cityFilter.length || cityFilter.includes(row.city)) &&
-                 (!stateFilter.length || stateFilter.includes(row.state)) &&
-                 (!distributorFilter.length || distributorFilter.includes(row.distributor)) &&
-                 (!isNaN(rowDate) && rowDate >= from && rowDate <= to);
-        });
+  fetch(`https://script.google.com/macros/s/AKfycbyqU54C2beZusTl3uBBaRCXHPDC-8dz6x9nIobW7r7ufdYxSXzQqfnqxYr_l_Vz42S0wA/exec?from=${fromInput}&to=${toInput}`)
+    .then(res => res.json())
+    .then(data => {
+      repList = [...new Set(data.rawData.map(r => r.rep))];
+      cityList = [...new Set(data.rawData.map(r => r.city))];
+      stateList = [...new Set(data.rawData.map(r => r.state))];
+      distributorList = [...new Set(data.rawData.map(r => r.distributor))];
+      enableMultiSelect();
 
-        renderTable(filtered);
-        renderSummary(filtered);
-        renderPieChart(filtered);
-        renderBarChart(filtered);
+      const filtered = data.rawData.filter(row => {
+        const rowDate = new Date(row.billDate + 'T00:00:00');
+
+        const dateOk = (!from || rowDate >= from) && (!to || rowDate <= to);
+        const repOk = repFilter.length === 0 || repFilter.includes(row.rep);
+        const cityOk = cityFilter.length === 0 || cityFilter.includes(row.city);
+        const stateOk = stateFilter.length === 0 || stateFilter.includes(row.state);
+        const distOk = distributorFilter.length === 0 || distributorFilter.includes(row.distributor);
+
+        return dateOk && repOk && cityOk && stateOk && distOk;
       });
-  }
 
-  function enableMultiSelect() {
-    ["#repFilter", "#cityFilter", "#stateFilter", "#distributorFilter"].forEach(selector => {
-      if (!$(selector).hasClass("select2-hidden-accessible")) {
-        $(selector).select2({ width: '150px' });
-      }
+      renderTable(filtered);
+      renderSummary(filtered);
+      renderPieChart(filtered);
+      renderBarChart(filtered);
     });
-    setOptions("#repFilter", repList);
-    setOptions("#cityFilter", cityList);
-    setOptions("#stateFilter", stateList);
-    setOptions("#distributorFilter", distributorList);
-  }
+}
 
-  function setOptions(selector, list) {
-    const select = document.querySelector(selector);
-    select.innerHTML = "";
-    list.forEach(val => {
-      const option = document.createElement("option");
-      option.value = val;
-      option.text = val;
-      select.appendChild(option);
-    });
-  }
+function enableMultiSelect() {
+  setOptions("#repFilter", repList);
+  setOptions("#cityFilter", cityList);
+  setOptions("#stateFilter", stateList);
+  setOptions("#distributorFilter", distributorList);
 
-  function renderTable(data) {
-    const tbody = document.querySelector("#salesTable tbody");
-    tbody.innerHTML = "";
-    data.forEach(row => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${row.billNo || "-"}</td>
-        <td>${row.billDate}</td>
-        <td>${row.billAmount}</td>
-        <td>${row.distributor}</td>
-        <td>${row.city}</td>
-        <td>${row.state}</td>
-        <td>${row.rep}</td>`;
-      tbody.appendChild(tr);
-    });
-  }
+  ["#repFilter", "#cityFilter", "#stateFilter", "#distributorFilter"].forEach(selector => {
+    $(selector).select2({ width: '180px' });
+  });
+}
 
-  function renderSummary(data) {
-    const total = data.reduce((sum, r) => sum + Number(r.billAmount), 0);
-    const avg = data.length ? (total / data.length).toFixed(2) : 0;
-    const max = data.reduce((max, r) => Math.max(max, Number(r.billAmount)), 0);
+function setOptions(selector, list) {
+  const select = document.querySelector(selector);
+  select.innerHTML = "";
+  list.forEach(val => {
+    const option = document.createElement("option");
+    option.value = val;
+    option.text = val;
+    select.appendChild(option);
+  });
+}
 
-    document.getElementById("totalSale").innerText = `Total Sale: ₹${total}`;
-    document.getElementById("avgSale").innerText = `Average Sale: ₹${avg}`;
-    document.getElementById("maxSale").innerText = `Max Sale: ₹${max}`;
-    document.getElementById("billCount").innerText = `Total Bills: ${data.length}`;
-  }
+function renderTable(data) {
+  const tbody = document.querySelector("#salesTable tbody");
+  tbody.innerHTML = "";
+  data.forEach(row => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.billNo || "-"}</td>
+      <td>${row.billDate}</td>
+      <td>${row.billAmount}</td>
+      <td>${row.distributor}</td>
+      <td>${row.city}</td>
+      <td>${row.state}</td>
+      <td>${row.rep}</td>`;
+    tbody.appendChild(tr);
+  });
+}
 
-  function renderPieChart(data) {
-    const ctx = document.getElementById('statePie').getContext('2d');
-    if (stateChart) stateChart.destroy();
+function renderSummary(data) {
+  const total = data.reduce((sum, r) => sum + Number(r.billAmount), 0);
+  const avg = data.length ? (total / data.length).toFixed(2) : 0;
+  const max = data.reduce((max, r) => Math.max(max, Number(r.billAmount)), 0);
 
-    const stateSales = {};
-    data.forEach(row => {
-      stateSales[row.state] = (stateSales[row.state] || 0) + Number(row.billAmount);
-    });
+  document.getElementById("totalSale").innerText = `Total Sale: ₹${total}`;
+  document.getElementById("avgSale").innerText = `Average Sale: ₹${avg}`;
+  document.getElementById("maxSale").innerText = `Max Sale: ₹${max}`;
+  document.getElementById("billCount").innerText = `Total Bills: ${data.length}`;
+}
 
-    const labels = Object.keys(stateSales);
-    const values = Object.values(stateSales);
-    const colors = labels.map(() => `hsl(${Math.random()*360}, 70%, 70%)`);
+function renderPieChart(data) {
+  const ctx = document.getElementById('statePie').getContext('2d');
+  if (stateChart) stateChart.destroy();
 
-    stateChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels,
-        datasets: [{ data: values, backgroundColor: colors }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: 'right'
-          },
-          tooltip: {
-            callbacks: {
-              label: ctx => `${ctx.label} - ₹${ctx.raw.toLocaleString()}`
-            }
+  const stateSales = {};
+  data.forEach(row => {
+    stateSales[row.state] = (stateSales[row.state] || 0) + Number(row.billAmount);
+  });
+
+  const labels = Object.keys(stateSales);
+  const values = Object.values(stateSales);
+  const colors = labels.map(() => `hsl(${Math.random()*360}, 70%, 70%)`);
+
+  stateChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'right'
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.label} - ₹${ctx.raw.toLocaleString()}`
           }
         }
       }
-    });
-  }
+    }
+  });
+}
 
-  function renderBarChart(data) {
-    const ctx = document.getElementById('repBar').getContext('2d');
-    if (repChart) repChart.destroy();
+function renderBarChart(data) {
+  const ctx = document.getElementById('repBar').getContext('2d');
+  if (repChart) repChart.destroy();
 
-    const repSales = {};
-    data.forEach(row => {
-      repSales[row.rep] = (repSales[row.rep] || 0) + Number(row.billAmount);
-    });
+  const repSales = {};
+  data.forEach(row => {
+    repSales[row.rep] = (repSales[row.rep] || 0) + Number(row.billAmount);
+  });
 
-    const labels = Object.keys(repSales);
-    const values = Object.values(repSales);
+  const labels = Object.keys(repSales);
+  const values = Object.values(repSales);
 
-    repChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{ label: 'Rep Wise Sales', data: values, backgroundColor: 'skyblue' }]
-      },
-      options: { responsive: true }
-    });
-  }
+  repChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Rep Wise Sales', data: values, backgroundColor: 'skyblue' }]
+    },
+    options: { responsive: true }
+  });
+}
 </script>
 
 </body>
