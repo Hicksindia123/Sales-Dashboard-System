@@ -111,7 +111,7 @@ function loadData() {
   const stateFilter = $("#stateFilter").val() || [];
   const distributorFilter = $("#distributorFilter").val() || [];
 
-  fetch(`https://script.google.com/macros/s/YOUR_DEPLOYED_SCRIPT_URL/exec?from=${from}&to=${to}`)
+  fetch(https://script.google.com/macros/s/AKfycbw5vfPQzDI87lJnY-q7MUDMU2SzOY6Rz32U-_fK0abVONm669LmXthP-z9v4UfjcPGfwA/exec?from=${from}&to=${to}`)
     .then(res => res.json())
     .then(data => {
       repList = [...new Set(data.rawData.map(r => r.rep))];
