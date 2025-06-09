@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -32,25 +33,28 @@
   </div>
 
   <div class="bg-white rounded-xl shadow p-4 mb-6">
-    <canvas id="repBar" height="200"></canvas>
+    <canvas id="repBar" height="200" style="max-height: 280px;"></canvas>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <div class="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-72">
+    <div class="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-72 relative">
+      <button onclick="exportTable('stateSummary', 'State_Wise_Sales')" class="absolute top-2 right-2 text-xs text-blue-600">⬇️</button>
       <h3 class="font-semibold mb-2">State-wise Sales</h3>
       <table class="w-full text-sm">
         <thead><tr><th>State</th><th>Total Sale</th></tr></thead>
         <tbody id="stateSummary"></tbody>
       </table>
     </div>
-    <div class="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-72">
+    <div class="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-72 relative">
+      <button onclick="exportTable('citySummary', 'City_Wise_Sales')" class="absolute top-2 right-2 text-xs text-blue-600">⬇️</button>
       <h3 class="font-semibold mb-2">City-wise Sales</h3>
       <table class="w-full text-sm">
         <thead><tr><th>City</th><th>Total Sale</th></tr></thead>
         <tbody id="citySummary"></tbody>
       </table>
     </div>
-    <div class="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-72">
+    <div class="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-72 relative">
+      <button onclick="exportTable('distributorSummary', 'Distributor_Wise_Sales')" class="absolute top-2 right-2 text-xs text-blue-600">⬇️</button>
       <h3 class="font-semibold mb-2">Distributor-wise Sales</h3>
       <table class="w-full text-sm">
         <thead><tr><th>Distributor</th><th>Total Sale</th></tr></thead>
@@ -59,7 +63,8 @@
     </div>
   </div>
 
-  <div class="bg-white rounded-xl shadow p-4">
+  <div class="bg-white rounded-xl shadow p-4 relative">
+    <button onclick="exportTable('salesTableBody', 'Detailed_Sales')" class="absolute top-2 right-2 text-xs text-blue-600">⬇️</button>
     <h3 class="font-semibold mb-2">Detailed Sales Data</h3>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -159,6 +164,17 @@
     const arr = Object.entries(obj).sort((a,b)=>b[1]-a[1]);
     const tbody = $(sel).empty();
     arr.forEach(([k,v])=> tbody.append(`<tr><td>${k}</td><td>₹${v.toLocaleString()}</td></tr>`));
+  }
+
+  function exportTable(tableId, filename) {
+    const rows = document.querySelectorAll(`#${tableId} tr`);
+    const data = Array.from(rows).map(row =>
+      Array.from(row.cells).map(cell => cell.innerText.trim())
+    );
+    const ws = XLSX.utils.aoa_to_sheet([[...document.querySelector(`#${tableId}`).parentElement.querySelectorAll('th')].map(th => th.innerText), ...data]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, filename);
+    XLSX.writeFile(wb, `${filename}.xlsx`);
   }
 
   $(document).ready(loadData);
