@@ -24,6 +24,7 @@
     canvas { background: white; border-radius: 8px; padding: 10px; width: 48% !important; height: 400px !important; }
     table {
       width: 100%; border-collapse: collapse; background: white;
+      margin-top: 20px;
     }
     th, td {
       border: 1px solid #ccc; padding: 8px; text-align: left;
@@ -54,9 +55,15 @@
 </div>
 
 <div class="chart-section">
-  <canvas id="statePie"></canvas>
   <canvas id="repBar"></canvas>
 </div>
+
+<table id="summaryTable">
+  <thead>
+    <tr id="summaryHeader"></tr>
+  </thead>
+  <tbody id="summaryBody"></tbody>
+</table>
 
 <table id="salesTable">
   <thead>
@@ -74,7 +81,7 @@
 </table>
 
 <script>
-let repList = [], cityList = [], distributorList = [], stateList = [], stateChart, repChart;
+let repList = [], cityList = [], distributorList = [], stateList = [], repChart;
 
 function loadData() {
   const fromInput = document.getElementById("fromDate").value;
@@ -99,20 +106,17 @@ function loadData() {
 
       const filtered = data.rawData.filter(row => {
         const rowDate = new Date(row.billDate + 'T00:00:00');
-
-        const dateOk = (!from || rowDate >= from) && (!to || rowDate <= to);
-        const repOk = repFilter.length === 0 || repFilter.includes(row.rep);
-        const cityOk = cityFilter.length === 0 || cityFilter.includes(row.city);
-        const stateOk = stateFilter.length === 0 || stateFilter.includes(row.state);
-        const distOk = distributorFilter.length === 0 || distributorFilter.includes(row.distributor);
-
-        return dateOk && repOk && cityOk && stateOk && distOk;
+        return (!from || rowDate >= from) && (!to || rowDate <= to) &&
+               (repFilter.length === 0 || repFilter.includes(row.rep)) &&
+               (cityFilter.length === 0 || cityFilter.includes(row.city)) &&
+               (stateFilter.length === 0 || stateFilter.includes(row.state)) &&
+               (distributorFilter.length === 0 || distributorFilter.includes(row.distributor));
       });
 
       renderTable(filtered);
       renderSummary(filtered);
-      renderPieChart(filtered);
       renderBarChart(filtered);
+      renderGroupSummary(filtered);
     });
 }
 
@@ -166,41 +170,6 @@ function renderSummary(data) {
   document.getElementById("billCount").innerText = `Total Bills: ${data.length}`;
 }
 
-function renderPieChart(data) {
-  const ctx = document.getElementById('statePie').getContext('2d');
-  if (stateChart) stateChart.destroy();
-
-  const stateSales = {};
-  data.forEach(row => {
-    stateSales[row.state] = (stateSales[row.state] || 0) + Number(row.billAmount);
-  });
-
-  const labels = Object.keys(stateSales);
-  const values = Object.values(stateSales);
-  const colors = labels.map(() => `hsl(${Math.random()*360}, 70%, 70%)`);
-
-  stateChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels,
-      datasets: [{ data: values, backgroundColor: colors }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: 'right'
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.label} - ₹${ctx.raw.toLocaleString()}`
-          }
-        }
-      }
-    }
-  });
-}
-
 function renderBarChart(data) {
   const ctx = document.getElementById('repBar').getContext('2d');
   if (repChart) repChart.destroy();
@@ -221,6 +190,29 @@ function renderBarChart(data) {
     },
     options: { responsive: true }
   });
+}
+
+function renderGroupSummary(data) {
+  const header = document.getElementById("summaryHeader");
+  const body = document.getElementById("summaryBody");
+  header.innerHTML = "";
+  body.innerHTML = "";
+
+  const selectedStates = $("#stateFilter").val() || [];
+  const groupBy = selectedStates.length === 1 ? 'city' : 'state';
+
+  const salesGroup = {};
+  data.forEach(row => {
+    const key = row[groupBy];
+    salesGroup[key] = (salesGroup[key] || 0) + Number(row.billAmount);
+  });
+
+  header.innerHTML = `<th>${groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}</th><th>Total Sale</th>`;
+  for (const [label, value] of Object.entries(salesGroup)) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${label}</td><td>₹${value.toLocaleString()}</td>`;
+    body.appendChild(tr);
+  }
 }
 </script>
 
