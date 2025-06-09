@@ -2,87 +2,92 @@
 <html>
 <head>
   <title>Sales Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .filter-group, .chart-section, .data-table { margin-bottom: 20px; }
-    .filter-group input, .filter-group button { margin-right: 10px; }
-    .card {
-      display: inline-block;
-      width: 23%;
-      padding: 15px;
-      margin: 1%;
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f3f3f3; }
+    .metrics { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
+    .metric-card {
+      background: white;
+      padding: 15px 20px;
+      margin: 10px;
       box-shadow: 0 2px 6px #ccc;
       border-radius: 8px;
-      background: #fff;
-      vertical-align: top;
+      width: 23%;
+      text-align: center;
     }
+    .filter-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .filter-group label { display: flex; flex-direction: column; font-weight: bold; }
     table {
-      width: 100%;
-      border-collapse: collapse;
+      width: 100%; border-collapse: collapse; background: white;
     }
     th, td {
-      padding: 8px;
-      border: 1px solid #ccc;
-      text-align: left;
+      border: 1px solid #ccc; padding: 8px; text-align: left;
     }
-    th {
-      background: #007BFF;
-      color: #fff;
-    }
+    th { background: #007BFF; color: white; }
+    canvas { background: white; border-radius: 8px; margin-top: 20px; padding: 10px; }
   </style>
 </head>
 <body>
 
 <h2>Sales Dashboard</h2>
 
+<div class="metrics">
+  <div class="metric-card" id="totalSale">Total Sale: ₹0</div>
+  <div class="metric-card" id="avgSale">Average Sale: ₹0</div>
+  <div class="metric-card" id="maxSale">Max Sale: ₹0</div>
+  <div class="metric-card" id="billCount">Total Bills: 0</div>
+</div>
+
 <div class="filter-group">
-  <label>From: <input type="date" id="fromDate" /></label>
-  <label>To: <input type="date" id="toDate" /></label>
+  <label>From Date <input type="date" id="fromDate"></label>
+  <label>To Date <input type="date" id="toDate"></label>
+  <label>Rep <input type="text" id="repFilter" placeholder="Search Rep"></label>
+  <label>City <input type="text" id="cityFilter" placeholder="Search City"></label>
+  <label>Distributor <input type="text" id="distributorFilter" placeholder="Search Distributor"></label>
   <button onclick="loadData()">Load</button>
 </div>
 
-<div class="chart-section">
-  <div class="card" id="cityChart">City Wise Sales</div>
-  <div class="card" id="distributorChart">Distributor Wise Sales</div>
-  <div class="card" id="stateChart">State Wise Sales</div>
-  <div class="card" id="repChart">Rep Wise Sales</div>
-</div>
+<table id="salesTable">
+  <thead>
+    <tr>
+      <th>Bill No.</th>
+      <th>Bill Date</th>
+      <th>Bill Amount</th>
+      <th>Distributor</th>
+      <th>City</th>
+      <th>State</th>
+      <th>Rep</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
-<h3>Sales Data</h3>
-<div class="data-table">
-  <table id="salesTable">
-    <thead>
-      <tr>
-        <th>Bill Date</th>
-        <th>Distributor</th>
-        <th>City</th>
-        <th>State</th>
-        <th>Rep</th>
-        <th>Bill Amount (₹)</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
+<canvas id="statePie" width="400" height="200"></canvas>
+<canvas id="repBar" width="400" height="200"></canvas>
 
 <script>
   function loadData() {
     const from = document.getElementById("fromDate").value;
     const to = document.getElementById("toDate").value;
+    const repFilter = document.getElementById("repFilter").value.toLowerCase();
+    const cityFilter = document.getElementById("cityFilter").value.toLowerCase();
+    const distributorFilter = document.getElementById("distributorFilter").value.toLowerCase();
 
-    const url = `https://script.google.com/macros/s/AKfycbxQ0w78x3CfqAN00ZNB4im-gqVwtpjxFLrN0AvAYEUMeqEWEpGioE3wDuyUVHKSOwa2aQ/exec?from=${from}&to=${to}`;
-
-    fetch(url)
+    fetch(`https://script.google.com/macros/s/AKfycbx0-uMX7Dcqyj0lYiZ0jrQDJEjDsoeRpfva5oZi5gz_iKJa0L2Nn0i19J9osWHKtuzQ0Q/exec?from=${from}&to=${to}`)
       .then(res => res.json())
       .then(data => {
-        renderTable(data.rawData);
-        // Placeholder: Add render functions for charts below
-        document.getElementById("cityChart").innerText = `City Wise Sales\n${JSON.stringify(data.cityWise, null, 2)}`;
-        document.getElementById("distributorChart").innerText = `Distributor Wise Sales\n${JSON.stringify(data.distributorWise, null, 2)}`;
-        document.getElementById("stateChart").innerText = `State Wise Sales\n${JSON.stringify(data.stateWise, null, 2)}`;
-        document.getElementById("repChart").innerText = `Rep Wise Sales\n${JSON.stringify(data.repWise, null, 2)}`;
-      })
-      .catch(err => alert("Failed to load data: " + err));
+        let filtered = data.rawData.filter(row =>
+          row.rep.toLowerCase().includes(repFilter) &&
+          row.city.toLowerCase().includes(cityFilter) &&
+          row.distributor.toLowerCase().includes(distributorFilter)
+        );
+
+        renderTable(filtered);
+        renderSummary(filtered);
+        renderPieChart(data.stateWise);
+        renderBarChart(data.repWise);
+      });
   }
 
   function renderTable(data) {
@@ -91,14 +96,56 @@
     data.forEach(row => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
+        <td>${row.billNo || "-"}</td>
         <td>${row.billDate}</td>
+        <td>${row.billAmount}</td>
         <td>${row.distributor}</td>
         <td>${row.city}</td>
         <td>${row.state}</td>
-        <td>${row.rep}</td>
-        <td>${row.billAmount}</td>
-      `;
+        <td>${row.rep}</td>`;
       tbody.appendChild(tr);
+    });
+  }
+
+  function renderSummary(data) {
+    const total = data.reduce((sum, r) => sum + Number(r.billAmount), 0);
+    const avg = data.length ? (total / data.length).toFixed(2) : 0;
+    const max = data.reduce((max, r) => Math.max(max, Number(r.billAmount)), 0);
+
+    document.getElementById("totalSale").innerText = `Total Sale: ₹${total}`;
+    document.getElementById("avgSale").innerText = `Average Sale: ₹${avg}`;
+    document.getElementById("maxSale").innerText = `Max Sale: ₹${max}`;
+    document.getElementById("billCount").innerText = `Total Bills: ${data.length}`;
+  }
+
+  function renderPieChart(data) {
+    const ctx = document.getElementById('statePie').getContext('2d');
+    new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(data),
+        datasets: [{
+          data: Object.values(data),
+          backgroundColor: Object.keys(data).map(() => `hsl(${Math.random()*360}, 70%, 70%)`)
+        }]
+      },
+      options: { responsive: true }
+    });
+  }
+
+  function renderBarChart(data) {
+    const ctx = document.getElementById('repBar').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(data),
+        datasets: [{
+          label: 'Rep Wise Sales',
+          data: Object.values(data),
+          backgroundColor: 'skyblue'
+        }]
+      },
+      options: { responsive: true }
     });
   }
 </script>
