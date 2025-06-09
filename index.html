@@ -29,6 +29,9 @@
       border: 1px solid #ccc; padding: 8px; text-align: left;
     }
     th { background: #007BFF; color: white; }
+    .legend-container { max-height: 100px; overflow: hidden; position: relative; }
+    .legend-container.expanded { max-height: none; }
+    .toggle-legend { cursor: pointer; color: #007BFF; text-align: center; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -47,12 +50,17 @@
   <label>To Date <input type="date" id="toDate"></label>
   <label>Rep <input type="text" id="repFilter" class="autocomplete"></label>
   <label>City <input type="text" id="cityFilter" class="autocomplete"></label>
+  <label>State <input type="text" id="stateFilter" class="autocomplete"></label>
   <label>Distributor <input type="text" id="distributorFilter" class="autocomplete"></label>
   <button onclick="loadData()">Load</button>
 </div>
 
 <div class="chart-section">
-  <canvas id="statePie"></canvas>
+  <div>
+    <canvas id="statePie"></canvas>
+    <div class="legend-container" id="stateLegend"></div>
+    <div class="toggle-legend" onclick="toggleLegend()">Show More ▼</div>
+  </div>
   <canvas id="repBar"></canvas>
 </div>
 
@@ -72,13 +80,15 @@
 </table>
 
 <script>
-  let repList = [], cityList = [], distributorList = [];
+  let repList = [], cityList = [], distributorList = [], stateList = [];
+  let stateChart;
 
   function loadData() {
     const from = document.getElementById("fromDate").value;
     const to = document.getElementById("toDate").value;
     const repFilter = document.getElementById("repFilter").value.toLowerCase();
     const cityFilter = document.getElementById("cityFilter").value.toLowerCase();
+    const stateFilter = document.getElementById("stateFilter").value.toLowerCase();
     const distributorFilter = document.getElementById("distributorFilter").value.toLowerCase();
 
     fetch(`https://script.google.com/macros/s/AKfycbzP8wroEEmje9M-fQfQZL3xOl01ilmgXG6vWR4gS_8mqQf1sj4nGmtoOqQzSeskHetXEA/exec?from=${from}&to=${to}`)
@@ -86,12 +96,14 @@
       .then(data => {
         repList = [...new Set(data.rawData.map(r => r.rep))];
         cityList = [...new Set(data.rawData.map(r => r.city))];
+        stateList = [...new Set(data.rawData.map(r => r.state))];
         distributorList = [...new Set(data.rawData.map(r => r.distributor))];
         enableAutocomplete();
 
         let filtered = data.rawData.filter(row =>
           row.rep.toLowerCase().includes(repFilter) &&
           row.city.toLowerCase().includes(cityFilter) &&
+          row.state.toLowerCase().includes(stateFilter) &&
           row.distributor.toLowerCase().includes(distributorFilter)
         );
 
@@ -105,6 +117,7 @@
   function enableAutocomplete() {
     $("#repFilter").autocomplete({ source: repList });
     $("#cityFilter").autocomplete({ source: cityList });
+    $("#stateFilter").autocomplete({ source: stateList });
     $("#distributorFilter").autocomplete({ source: distributorList });
   }
 
@@ -138,17 +151,25 @@
 
   function renderPieChart(data) {
     const ctx = document.getElementById('statePie').getContext('2d');
-    new Chart(ctx, {
+    if (stateChart) stateChart.destroy();
+    const colors = Object.keys(data).map(() => `hsl(${Math.random()*360}, 70%, 70%)`);
+    stateChart = new Chart(ctx, {
       type: 'pie',
       data: {
         labels: Object.keys(data),
         datasets: [{
           data: Object.values(data),
-          backgroundColor: Object.keys(data).map(() => `hsl(${Math.random()*360}, 70%, 70%)`)
+          backgroundColor: colors
         }]
       },
-      options: { responsive: true }
+      options: { responsive: true, plugins: { legend: { display: false } } }
     });
+
+    const legendHtml = Object.entries(data).map(([state, value], index) => `
+      <div><span style="display:inline-block;width:12px;height:12px;background-color:${colors[index]};margin-right:5px;"></span>
+      ${state} - ₹${value}</div>
+    `).join('');
+    document.getElementById("stateLegend").innerHTML = legendHtml;
   }
 
   function renderBarChart(data) {
@@ -165,6 +186,13 @@
       },
       options: { responsive: true }
     });
+  }
+
+  function toggleLegend() {
+    const container = document.getElementById("stateLegend");
+    container.classList.toggle("expanded");
+    const toggle = document.querySelector(".toggle-legend");
+    toggle.innerText = container.classList.contains("expanded") ? "Show Less ▲" : "Show More ▼";
   }
 </script>
 
