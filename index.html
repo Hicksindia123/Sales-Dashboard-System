@@ -4,6 +4,8 @@
   <title>Sales Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f3f3f3; }
     .metrics { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
@@ -18,6 +20,8 @@
     }
     .filter-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
     .filter-group label { display: flex; flex-direction: column; font-weight: bold; }
+    .chart-section { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+    canvas { background: white; border-radius: 8px; padding: 10px; width: 48% !important; height: 300px !important; }
     table {
       width: 100%; border-collapse: collapse; background: white;
     }
@@ -25,7 +29,6 @@
       border: 1px solid #ccc; padding: 8px; text-align: left;
     }
     th { background: #007BFF; color: white; }
-    canvas { background: white; border-radius: 8px; margin-top: 20px; padding: 10px; }
   </style>
 </head>
 <body>
@@ -42,10 +45,15 @@
 <div class="filter-group">
   <label>From Date <input type="date" id="fromDate"></label>
   <label>To Date <input type="date" id="toDate"></label>
-  <label>Rep <input type="text" id="repFilter" placeholder="Search Rep"></label>
-  <label>City <input type="text" id="cityFilter" placeholder="Search City"></label>
-  <label>Distributor <input type="text" id="distributorFilter" placeholder="Search Distributor"></label>
+  <label>Rep <input type="text" id="repFilter" class="autocomplete"></label>
+  <label>City <input type="text" id="cityFilter" class="autocomplete"></label>
+  <label>Distributor <input type="text" id="distributorFilter" class="autocomplete"></label>
   <button onclick="loadData()">Load</button>
+</div>
+
+<div class="chart-section">
+  <canvas id="statePie"></canvas>
+  <canvas id="repBar"></canvas>
 </div>
 
 <table id="salesTable">
@@ -63,10 +71,9 @@
   <tbody></tbody>
 </table>
 
-<canvas id="statePie" width="400" height="200"></canvas>
-<canvas id="repBar" width="400" height="200"></canvas>
-
 <script>
+  let repList = [], cityList = [], distributorList = [];
+
   function loadData() {
     const from = document.getElementById("fromDate").value;
     const to = document.getElementById("toDate").value;
@@ -77,6 +84,11 @@
     fetch(`https://script.google.com/macros/s/AKfycbzP8wroEEmje9M-fQfQZL3xOl01ilmgXG6vWR4gS_8mqQf1sj4nGmtoOqQzSeskHetXEA/exec?from=${from}&to=${to}`)
       .then(res => res.json())
       .then(data => {
+        repList = [...new Set(data.rawData.map(r => r.rep))];
+        cityList = [...new Set(data.rawData.map(r => r.city))];
+        distributorList = [...new Set(data.rawData.map(r => r.distributor))];
+        enableAutocomplete();
+
         let filtered = data.rawData.filter(row =>
           row.rep.toLowerCase().includes(repFilter) &&
           row.city.toLowerCase().includes(cityFilter) &&
@@ -88,6 +100,12 @@
         renderPieChart(data.stateWise);
         renderBarChart(data.repWise);
       });
+  }
+
+  function enableAutocomplete() {
+    $("#repFilter").autocomplete({ source: repList });
+    $("#cityFilter").autocomplete({ source: cityList });
+    $("#distributorFilter").autocomplete({ source: distributorList });
   }
 
   function renderTable(data) {
