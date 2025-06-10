@@ -43,10 +43,6 @@
       background-color: #6366f1 !important;
       color: white !important;
     }
-
-    .clickable-row {
-      cursor: pointer;
-    }
   </style>
 </head>
 <body class="bg-gradient-to-br from-purple-800 via-indigo-900 to-blue-900 text-white p-6 font-sans">
@@ -125,41 +121,36 @@
       </table>
     </div>
   </div>
+
 <script>
   let repChart;
-  let appliedFilters = { state: null, city: null, distributor: null, rep: null };
-
-  function resetFilters() {
-    appliedFilters = { state: null, city: null, distributor: null, rep: null };
-    $('#repFilter, #cityFilter, #stateFilter, #distributorFilter').val(null).trigger('change');
-    loadData();
-  }
 
   function loadData() {
     const from = $('#fromDate').val();
     const to = $('#toDate').val();
+    const repF = $('#repFilter').val() || [];
+    const cityF = $('#cityFilter').val() || [];
+    const stateF = $('#stateFilter').val() || [];
+    const distF = $('#distributorFilter').val() || [];
 
-    fetch(`https://script.google.com/macros/s/AKfycbyMFLEnwplCG2dNUMTT6R6ItCUlYWP6mJS6wPNbYKIeEzdVMIyCQUKiYpMaB5DY9Ac61g/exec?from=${from}&to=${to}`)
+    fetch(https://script.google.com/macros/s/AKfycbyMFLEnwplCG2dNUMTT6R6ItCUlYWP6mJS6wPNbYKIeEzdVMIyCQUKiYpMaB5DY9Ac61g/exec?from=${from}&to=${to})
       .then(r => r.json())
       .then(data => {
+        console.log(data); // ✅ For debugging
         const raw = data.rawData;
-
-        // Populate filters only if empty (first time)
-        if (!$('#repFilter').hasClass('select2-hidden-accessible')) {
-          populateFilter('#repFilter', raw.map(r => r.rep));
-          populateFilter('#cityFilter', raw.map(r => r.city));
-          populateFilter('#stateFilter', raw.map(r => r.state));
-          populateFilter('#distributorFilter', raw.map(r => r.distributor));
-        }
+        populateFilter('#repFilter', raw.map(r => r.rep));
+        populateFilter('#cityFilter', raw.map(r => r.city));
+        populateFilter('#stateFilter', raw.map(r => r.state));
+        populateFilter('#distributorFilter', raw.map(r => r.distributor));
 
         const filtered = raw.filter(r => {
           const dt = new Date(r.billDate + 'T00:00:00');
           return (!from || dt >= new Date(from + 'T00:00:00')) &&
-                 (!to || dt <= new Date(to + 'T23:59:59')) &&
-                 (!appliedFilters.state || r.state === appliedFilters.state) &&
-                 (!appliedFilters.city || r.city === appliedFilters.city) &&
-                 (!appliedFilters.distributor || r.distributor === appliedFilters.distributor) &&
-                 (!appliedFilters.rep || r.rep === appliedFilters.rep);
+                 (!to   || dt <= new Date(to + 'T23:59:59')) &&
+                 (repF.length === 0 || repF.includes(r.rep)) &&
+                 (cityF.length === 0 || cityF.includes(r.city)) &&
+                 (stateF.length === 0 || stateF.includes(r.state)) &&
+                 (distF.length === 0 || distF.includes(r.distributor));
         });
 
         renderTable(filtered);
@@ -172,22 +163,70 @@
   function populateFilter(selector, list) {
     const unique = Array.from(new Set(list.sort()));
     const el = $(selector);
+    if (el.hasClass("select2-hidden-accessible")) {
+      el.select2('destroy');
+    }
     el.empty();
-    unique.forEach(v => el.append(`<option>${v}</option>`));
+    unique.forEach(v => el.append(<option>${v}</option>));
     el.select2({ width: '100%', placeholder: 'Select' });
   }
 
-  function sortAndFill(obj, sel) {
-    const tbody = $(sel).empty();
-    Object.entries(obj).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => {
-      tbody.append(`<tr class="clickable-row hover:bg-purple-700" data-type="${sel}" data-key="${k}"><td>${k}</td><td>₹${v.toLocaleString()}</td></tr>`);
+  function renderTable(data) {
+    const tbody = $('#salesTableBody').empty();
+    data.forEach(r => {
+      tbody.append(<tr>
+        <td>${r.billNo}</td>
+        <td>${r.billDate}</td>
+        <td>${r.billAmount}</td>
+        <td>${r.distributor}</td>
+        <td>${r.city}</td>
+        <td>${r.state}</td>
+        <td>${r.rep}</td>
+      </tr>);
     });
-    $(sel + ' tr').off('click').on('click', function () {
-      const key = $(this).data('key');
-      if (sel === '#stateSummary') appliedFilters.state = key;
-      if (sel === '#citySummary') appliedFilters.city = key;
-      if (sel === '#distributorSummary') appliedFilters.distributor = key;
-      loadData();
+  }
+
+  function renderBar(data) {
+    const sales = {};
+    data.forEach(r => sales[r.rep] = (sales[r.rep] || 0) + Number(r.billAmount));
+    const sorted = Object.entries(sales).sort((a, b) => b[1] - a[1]);
+    const labels = sorted.map(([rep]) => rep);
+    const values = sorted.map(([_, amount]) => amount);
+
+    const colors = ['#60a5fa', '#f472b6', '#facc15', '#34d399', '#a78bfa', '#f87171', '#4ade80', '#fbbf24', '#c084fc', '#10b981'];
+    const backgroundColors = labels.map((_, i) => colors[i % colors.length]);
+
+    const ctx = document.getElementById('repBar').getContext('2d');
+    if (repChart) repChart.destroy();
+    repChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: backgroundColors,
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ₹${Number(ctx.raw).toLocaleString()}
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { autoSkip: false, color: 'white', maxRotation: 90, minRotation: 45 }
+          },
+          y: {
+            ticks: { color: 'white' }
+          }
+        }
+      }
     });
   }
 
@@ -203,36 +242,37 @@
     sortAndFill(distMap, '#distributorSummary');
   }
 
-  function renderBar(data) {
-    const sales = {};
-    data.forEach(r => sales[r.rep] = (sales[r.rep] || 0) + Number(r.billAmount));
-    const sorted = Object.entries(sales).sort((a, b) => b[1] - a[1]);
-    const labels = sorted.map(([rep]) => rep);
-    const values = sorted.map(([_, amount]) => amount);
+  function renderMetrics(data) {
+    const total = data.reduce((sum, r) => sum + Number(r.billAmount), 0);
+    const avg = data.length ? total / data.length : 0;
+    const max = Math.max(...data.map(r => Number(r.billAmount)), 0);
+    $('#totalSale').text(₹${total.toLocaleString()});
+    $('#avgSale').text(₹${avg.toFixed(2)});
+    $('#maxSale').text(₹${max.toLocaleString()});
+    $('#billCount').text(${data.length});
+  }
 
-    const ctx = document.getElementById('repBar').getContext('2d');
-    if (repChart) repChart.destroy();
-    repChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{ data: values, backgroundColor: '#6366f1', borderRadius: 5 }]
-      },
-      options: {
-        onClick: (evt, item) => {
-          if (item.length > 0) {
-            appliedFilters.rep = labels[item[0].index];
-            loadData();
-          }
-        },
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: 'white' } },
-          y: { ticks: { color: 'white' } }
-        }
-      }
+  function sortAndFill(obj, sel) {
+    const arr = Object.entries(obj).sort((a, b) => b[1] - a[1]);
+    const tbody = $(sel).empty();
+    arr.forEach(([k, v]) => {
+      tbody.append(<tr><td>${k}</td><td>₹${v.toLocaleString()}</td></tr>);
     });
   }
+
+  function exportTable(tableId, filename) {
+    const table = document.getElementById(tableId);
+    const headers = Array.from(table.closest('table').querySelectorAll('thead th')).map(th => th.innerText.trim());
+    const rows = Array.from(document.querySelectorAll(#${tableId} tr)).map(row =>
+      Array.from(row.cells).map(cell => cell.innerText.trim())
+    );
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, filename);
+    XLSX.writeFile(wb, ${filename}.xlsx);
+  }
+
+  $(document).ready(loadData);
 </script>
 </body>
 </html>
