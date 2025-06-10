@@ -133,7 +133,7 @@
     const stateF = $('#stateFilter').val() || [];
     const distF = $('#distributorFilter').val() || [];
 
-    fetch(https://script.google.com/macros/s/AKfycbyMFLEnwplCG2dNUMTT6R6ItCUlYWP6mJS6wPNbYKIeEzdVMIyCQUKiYpMaB5DY9Ac61g/exec?from=${from}&to=${to})
+    fetch(`https://script.google.com/macros/s/AKfycbyMFLEnwplCG2dNUMTT6R6ItCUlYWP6mJS6wPNbYKIeEzdVMIyCQUKiYpMaB5DY9Ac61g/exec?from=${from}&to=${to}`)
       .then(r => r.json())
       .then(data => {
         console.log(data); // ✅ For debugging
@@ -167,14 +167,14 @@
       el.select2('destroy');
     }
     el.empty();
-    unique.forEach(v => el.append(<option>${v}</option>));
+    unique.forEach(v => el.append(`<option>${v}</option>`));
     el.select2({ width: '100%', placeholder: 'Select' });
   }
 
   function renderTable(data) {
     const tbody = $('#salesTableBody').empty();
     data.forEach(r => {
-      tbody.append(<tr>
+      tbody.append(`<tr>
         <td>${r.billNo}</td>
         <td>${r.billDate}</td>
         <td>${r.billAmount}</td>
@@ -182,7 +182,7 @@
         <td>${r.city}</td>
         <td>${r.state}</td>
         <td>${r.rep}</td>
-      </tr>);
+      </tr>`);
     });
   }
 
@@ -214,7 +214,7 @@
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: ctx => ₹${Number(ctx.raw).toLocaleString()}
+              label: ctx => `₹${Number(ctx.raw).toLocaleString()}`
             }
           }
         },
@@ -246,30 +246,30 @@
     const total = data.reduce((sum, r) => sum + Number(r.billAmount), 0);
     const avg = data.length ? total / data.length : 0;
     const max = Math.max(...data.map(r => Number(r.billAmount)), 0);
-    $('#totalSale').text(₹${total.toLocaleString()});
-    $('#avgSale').text(₹${avg.toFixed(2)});
-    $('#maxSale').text(₹${max.toLocaleString()});
-    $('#billCount').text(${data.length});
+    $('#totalSale').text(`₹${total.toLocaleString()}`);
+    $('#avgSale').text(`₹${avg.toFixed(2)}`);
+    $('#maxSale').text(`₹${max.toLocaleString()}`);
+    $('#billCount').text(`${data.length}`);
   }
 
   function sortAndFill(obj, sel) {
     const arr = Object.entries(obj).sort((a, b) => b[1] - a[1]);
     const tbody = $(sel).empty();
     arr.forEach(([k, v]) => {
-      tbody.append(<tr><td>${k}</td><td>₹${v.toLocaleString()}</td></tr>);
+      tbody.append(`<tr><td>${k}</td><td>₹${v.toLocaleString()}</td></tr>`);
     });
   }
 
   function exportTable(tableId, filename) {
     const table = document.getElementById(tableId);
     const headers = Array.from(table.closest('table').querySelectorAll('thead th')).map(th => th.innerText.trim());
-    const rows = Array.from(document.querySelectorAll(#${tableId} tr)).map(row =>
+    const rows = Array.from(document.querySelectorAll(`#${tableId} tr`)).map(row =>
       Array.from(row.cells).map(cell => cell.innerText.trim())
     );
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, filename);
-    XLSX.writeFile(wb, ${filename}.xlsx);
+    XLSX.writeFile(wb, `${filename}.xlsx`);
   }
 
   $(document).ready(loadData);
