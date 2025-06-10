@@ -99,23 +99,24 @@
     const stateF = $('#stateFilter').val() || [];
     const distF = $('#distributorFilter').val() || [];
 
-    fetch(`https://script.google.com/macros/s/AKfycbyMFLEnwplCG2dNUMTT6R6ItCUlYWP6mJS6wPNbYKIeEzdVMIyCQUKiYpMaB5DY9Ac61g/exec?from=${from}&to=${to})
+    fetch(`https://script.google.com/macros/s/AKfycbyMFLEnwplCG2dNUMTT6R6ItCUlYWP6mJS6wPNbYKIeEzdVMIyCQUKiYpMaB5DY9Ac61g/exec?from=${from}&to=${to}`)
       .then(r => r.json())
       .then(data => {
+        console.log(data); // ✅ For debugging
         const raw = data.rawData;
-        populateFilter('#repFilter', raw.map(r=>r.rep));
-        populateFilter('#cityFilter', raw.map(r=>r.city));
-        populateFilter('#stateFilter', raw.map(r=>r.state));
-        populateFilter('#distributorFilter', raw.map(r=>r.distributor));
+        populateFilter('#repFilter', raw.map(r => r.rep));
+        populateFilter('#cityFilter', raw.map(r => r.city));
+        populateFilter('#stateFilter', raw.map(r => r.state));
+        populateFilter('#distributorFilter', raw.map(r => r.distributor));
 
         const filtered = raw.filter(r => {
-          const dt = new Date(r.billDate+'T00:00:00');
-          return (!from || dt >= new Date(from+'T00:00:00')) &&
-                 (!to   || dt <= new Date(to+'T23:59:59')) &&
-                 (repF.length == 0 || repF.includes(r.rep)) &&
-                 (cityF.length == 0 || cityF.includes(r.city)) &&
-                 (stateF.length == 0 || stateF.includes(r.state)) &&
-                 (distF.length == 0 || distF.includes(r.distributor));
+          const dt = new Date(r.billDate + 'T00:00:00');
+          return (!from || dt >= new Date(from + 'T00:00:00')) &&
+                 (!to   || dt <= new Date(to + 'T23:59:59')) &&
+                 (repF.length === 0 || repF.includes(r.rep)) &&
+                 (cityF.length === 0 || cityF.includes(r.city)) &&
+                 (stateF.length === 0 || stateF.includes(r.state)) &&
+                 (distF.length === 0 || distF.includes(r.distributor));
         });
 
         renderTable(filtered);
@@ -126,16 +127,29 @@
   }
 
   function populateFilter(selector, list) {
-    const u = Array.from(new Set(list.sort()));
-    const el = $(selector).empty();
-    u.forEach(v => el.append(<option>${v}</option>));
+    const unique = Array.from(new Set(list.sort()));
+    const el = $(selector);
+    if (el.hasClass("select2-hidden-accessible")) {
+      el.select2('destroy');
+    }
+    el.empty();
+    unique.forEach(v => el.append(`<option>${v}</option>`));
     el.select2({ width: '100%', placeholder: 'Select' });
   }
 
   function renderTable(data) {
     const tbody = $('#salesTableBody').empty();
-    data.forEach(r => tbody.append(
-      <tr><td>${r.billNo}</td><td>${r.billDate}</td><td>${r.billAmount}</td><td>${r.distributor}</td><td>${r.city}</td><td>${r.state}</td><td>${r.rep}</td></tr>));
+    data.forEach(r => {
+      tbody.append(`<tr>
+        <td>${r.billNo}</td>
+        <td>${r.billDate}</td>
+        <td>${r.billAmount}</td>
+        <td>${r.distributor}</td>
+        <td>${r.city}</td>
+        <td>${r.state}</td>
+        <td>${r.rep}</td>
+      </tr>`);
+    });
   }
 
   function renderBar(data) {
@@ -166,7 +180,7 @@
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: ctx => ₹${Number(ctx.raw).toLocaleString()}
+              label: ctx => `₹${Number(ctx.raw).toLocaleString()}`
             }
           }
         },
@@ -183,45 +197,49 @@
   }
 
   function renderSummaries(data) {
-    const s={}, c={}, d={};
+    const stateMap = {}, cityMap = {}, distMap = {};
     data.forEach(r => {
-      s[r.state] = (s[r.state] || 0) + Number(r.billAmount);
-      c[r.city] = (c[r.city] || 0) + Number(r.billAmount);
-      d[r.distributor] = (d[r.distributor] || 0) + Number(r.billAmount);
+      stateMap[r.state] = (stateMap[r.state] || 0) + Number(r.billAmount);
+      cityMap[r.city] = (cityMap[r.city] || 0) + Number(r.billAmount);
+      distMap[r.distributor] = (distMap[r.distributor] || 0) + Number(r.billAmount);
     });
-    sortAndFill(s, '#stateSummary');
-    sortAndFill(c, '#citySummary');
-    sortAndFill(d, '#distributorSummary');
+    sortAndFill(stateMap, '#stateSummary');
+    sortAndFill(cityMap, '#citySummary');
+    sortAndFill(distMap, '#distributorSummary');
   }
 
   function renderMetrics(data) {
     const total = data.reduce((sum, r) => sum + Number(r.billAmount), 0);
     const avg = data.length ? total / data.length : 0;
     const max = Math.max(...data.map(r => Number(r.billAmount)), 0);
-    $('#totalSale').text(₹${total.toLocaleString()});
-    $('#avgSale').text(₹${avg.toFixed(2)});
-    $('#maxSale').text(₹${max.toLocaleString()});
-    $('#billCount').text(${data.length});
+    $('#totalSale').text(`₹${total.toLocaleString()}`);
+    $('#avgSale').text(`₹${avg.toFixed(2)}`);
+    $('#maxSale').text(`₹${max.toLocaleString()}`);
+    $('#billCount').text(`${data.length}`);
   }
 
   function sortAndFill(obj, sel) {
     const arr = Object.entries(obj).sort((a, b) => b[1] - a[1]);
     const tbody = $(sel).empty();
-    arr.forEach(([k, v]) => tbody.append(<tr><td>${k}</td><td>₹${v.toLocaleString()}</td></tr>));
+    arr.forEach(([k, v]) => {
+      tbody.append(`<tr><td>${k}</td><td>₹${v.toLocaleString()}</td></tr>`);
+    });
   }
 
   function exportTable(tableId, filename) {
-    const rows = document.querySelectorAll(#${tableId} tr);
-    const data = Array.from(rows).map(row =>
+    const table = document.getElementById(tableId);
+    const headers = Array.from(table.closest('table').querySelectorAll('thead th')).map(th => th.innerText.trim());
+    const rows = Array.from(document.querySelectorAll(`#${tableId} tr`)).map(row =>
       Array.from(row.cells).map(cell => cell.innerText.trim())
     );
-    const ws = XLSX.utils.aoa_to_sheet([[...document.querySelector(#${tableId}).parentElement.querySelectorAll('th')].map(th => th.innerText), ...data]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, filename);
-    XLSX.writeFile(wb, ${filename}.xlsx);
+    XLSX.writeFile(wb, `${filename}.xlsx`);
   }
 
   $(document).ready(loadData);
 </script>
+
 </body>
 </html>
