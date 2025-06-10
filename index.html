@@ -10,21 +10,83 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .select2-container--default .select2-selection--multiple {
-      background-color: black !important;
-      color: white !important;
-    }
-    .select2-container--default .select2-selection--multiple .select2-selection__choice {
-      background-color: #4a5568;
-      border: none;
-      color: white;
-    }
-  </style>
 </head>
 <body class="bg-gradient-to-br from-purple-800 via-indigo-900 to-blue-900 text-white p-6 font-sans">
 
-<!-- ... rest of your HTML as-is till script tag ... -->
+  <h2 class="text-3xl font-bold mb-6 text-center tracking-wider">HICKS SALES DASHBOARD</h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-black bg-opacity-80 rounded-xl shadow-xl p-6 text-center">
+      <div class="text-xl font-semibold text-blue-400">Total Sale</div>
+      <div class="text-3xl font-extrabold mt-2" id="totalSale">₹0</div>
+    </div>
+    <div class="bg-black bg-opacity-80 rounded-xl shadow-xl p-6 text-center">
+      <div class="text-xl font-semibold text-blue-400">Average Sale</div>
+      <div class="text-3xl font-extrabold mt-2" id="avgSale">₹0</div>
+    </div>
+    <div class="bg-black bg-opacity-80 rounded-xl shadow-xl p-6 text-center">
+      <div class="text-xl font-semibold text-blue-400">Max Sale</div>
+      <div class="text-3xl font-extrabold mt-2" id="maxSale">₹0</div>
+    </div>
+    <div class="bg-black bg-opacity-80 rounded-xl shadow-xl p-6 text-center">
+      <div class="text-xl font-semibold text-blue-400">Total Bills</div>
+      <div class="text-3xl font-extrabold mt-2" id="billCount">0</div>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-4 mb-6 items-end">
+    <div><label class="block font-medium">From:<input type="date" id="fromDate" class="mt-1 p-2 rounded border w-44 bg-white text-black"></label></div>
+    <div><label class="block font-medium">To:<input type="date" id="toDate" class="mt-1 p-2 rounded border w-44 bg-white text-black"></label></div>
+    <div><label class="block font-medium">Rep:<select id="repFilter" multiple class="w-44 bg-pink-500 text-white font-bold rounded-xl p-2 shadow-md"></select></label></div>
+    <div><label class="block font-medium">City:<select id="cityFilter" multiple class="w-44 bg-pink-500 text-white font-bold rounded-xl p-2 shadow-md"></select></label></div>
+    <div><label class="block font-medium">State:<select id="stateFilter" multiple class="w-44 bg-pink-500 text-white font-bold rounded-xl p-2 shadow-md"></select></label></div>
+    <div><label class="block font-medium">Distributor:<select id="distributorFilter" multiple class="w-44 bg-pink-500 text-white font-bold rounded-xl p-2 shadow-md"></select></label></div>
+    <button onclick="loadData()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg px-6 py-3 rounded-xl shadow-lg transition duration-200 ease-in-out">🔄 Load Data</button>
+  </div>
+
+  <div class="bg-black bg-opacity-60 rounded-xl shadow-lg p-4 mb-6">
+    <canvas id="repBar" height="200" style="max-height: 280px;"></canvas>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-black bg-opacity-60 rounded-xl shadow-lg p-4 overflow-y-auto max-h-72 relative">
+      <button onclick="exportTable('stateSummary', 'State_Wise_Sales')" class="absolute top-2 right-2 text-xs text-blue-400">⬇️</button>
+      <h3 class="font-semibold mb-2 text-white">State-wise Sales</h3>
+      <table class="w-full text-sm text-white">
+        <thead class="bg-purple-700"><tr><th>State</th><th>Total Sale</th></tr></thead>
+        <tbody id="stateSummary"></tbody>
+      </table>
+    </div>
+    <div class="bg-black bg-opacity-60 rounded-xl shadow-lg p-4 overflow-y-auto max-h-72 relative">
+      <button onclick="exportTable('citySummary', 'City_Wise_Sales')" class="absolute top-2 right-2 text-xs text-blue-400">⬇️</button>
+      <h3 class="font-semibold mb-2 text-white">City-wise Sales</h3>
+      <table class="w-full text-sm text-white">
+        <thead class="bg-purple-700"><tr><th>City</th><th>Total Sale</th></tr></thead>
+        <tbody id="citySummary"></tbody>
+      </table>
+    </div>
+    <div class="bg-black bg-opacity-60 rounded-xl shadow-lg p-4 overflow-y-auto max-h-72 relative">
+      <button onclick="exportTable('distributorSummary', 'Distributor_Wise_Sales')" class="absolute top-2 right-2 text-xs text-blue-400">⬇️</button>
+      <h3 class="font-semibold mb-2 text-white">Distributor-wise Sales</h3>
+      <table class="w-full text-sm text-white">
+        <thead class="bg-purple-700"><tr><th>Distributor</th><th>Total Sale</th></tr></thead>
+        <tbody id="distributorSummary"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="bg-black bg-opacity-60 rounded-xl shadow-lg p-4 relative">
+    <button onclick="exportTable('salesTableBody', 'Detailed_Sales')" class="absolute top-2 right-2 text-xs text-blue-400">⬇️</button>
+    <h3 class="font-semibold mb-2 text-white">Detailed Sales Data</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-white">
+        <thead class="bg-purple-700">
+          <tr><th>Bill No.</th><th>Bill Date</th><th>Bill Amount</th><th>Distributor</th><th>City</th><th>State</th><th>Rep</th></tr>
+        </thead>
+        <tbody id="salesTableBody"></tbody>
+      </table>
+    </div>
+  </div>
 
 <script>
   let repChart;
@@ -37,7 +99,7 @@
     const stateF = $('#stateFilter').val() || [];
     const distF = $('#distributorFilter').val() || [];
 
-    fetch(`https://script.google.com/macros/s/AKfycbyMFLEnwplCG2dNUMTT6R6ItCUlYWP6mJS6wPNbYKIeEzdVMIyCQUKiYpMaB5DY9Ac61g/exec?from=${from}&to=${to}`)
+    fetch(https://script.google.com/macros/s/AKfycbyMFLEnwplCG2dNUMTT6R6ItCUlYWP6mJS6wPNbYKIeEzdVMIyCQUKiYpMaB5DY9Ac61g/exec?from=${from}&to=${to})
       .then(r => r.json())
       .then(data => {
         const raw = data.rawData;
@@ -66,14 +128,14 @@
   function populateFilter(selector, list) {
     const u = Array.from(new Set(list.sort()));
     const el = $(selector).empty();
-    u.forEach(v => el.append(`<option>${v}</option>`));
+    u.forEach(v => el.append(<option>${v}</option>));
     el.select2({ width: '100%', placeholder: 'Select' });
   }
 
   function renderTable(data) {
     const tbody = $('#salesTableBody').empty();
-    data.forEach(r => tbody.append(`
-      <tr><td>${r.billNo}</td><td>${r.billDate}</td><td>${r.billAmount}</td><td>${r.distributor}</td><td>${r.city}</td><td>${r.state}</td><td>${r.rep}</td></tr>`));
+    data.forEach(r => tbody.append(
+      <tr><td>${r.billNo}</td><td>${r.billDate}</td><td>${r.billAmount}</td><td>${r.distributor}</td><td>${r.city}</td><td>${r.state}</td><td>${r.rep}</td></tr>));
   }
 
   function renderBar(data) {
@@ -100,19 +162,11 @@
       },
       options: {
         responsive: true,
-        onClick: (evt, elements) => {
-          if (elements.length > 0) {
-            const idx = elements[0].index;
-            const selectedRep = labels[idx];
-            $('#repFilter').val([selectedRep]).trigger('change');
-            loadData();
-          }
-        },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: ctx => `₹${Number(ctx.raw).toLocaleString()}`
+              label: ctx => ₹${Number(ctx.raw).toLocaleString()}
             }
           }
         },
@@ -144,51 +198,30 @@
     const total = data.reduce((sum, r) => sum + Number(r.billAmount), 0);
     const avg = data.length ? total / data.length : 0;
     const max = Math.max(...data.map(r => Number(r.billAmount)), 0);
-    $('#totalSale').text(`₹${total.toLocaleString()}`);
-    $('#avgSale').text(`₹${avg.toFixed(2)}`);
-    $('#maxSale').text(`₹${max.toLocaleString()}`);
-    $('#billCount').text(`${data.length}`);
+    $('#totalSale').text(₹${total.toLocaleString()});
+    $('#avgSale').text(₹${avg.toFixed(2)});
+    $('#maxSale').text(₹${max.toLocaleString()});
+    $('#billCount').text(${data.length});
   }
 
   function sortAndFill(obj, sel) {
     const arr = Object.entries(obj).sort((a, b) => b[1] - a[1]);
     const tbody = $(sel).empty();
-    arr.forEach(([k, v]) => tbody.append(`<tr><td>${k}</td><td>₹${v.toLocaleString()}</td></tr>`));
+    arr.forEach(([k, v]) => tbody.append(<tr><td>${k}</td><td>₹${v.toLocaleString()}</td></tr>));
   }
 
   function exportTable(tableId, filename) {
-    const rows = document.querySelectorAll(`#${tableId} tr`);
+    const rows = document.querySelectorAll(#${tableId} tr);
     const data = Array.from(rows).map(row =>
       Array.from(row.cells).map(cell => cell.innerText.trim())
     );
-    const ws = XLSX.utils.aoa_to_sheet([[...document.querySelector(`#${tableId}`).parentElement.querySelectorAll('th')].map(th => th.innerText), ...data]);
+    const ws = XLSX.utils.aoa_to_sheet([[...document.querySelector(#${tableId}).parentElement.querySelectorAll('th')].map(th => th.innerText), ...data]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, filename);
-    XLSX.writeFile(wb, `${filename}.xlsx`);
+    XLSX.writeFile(wb, ${filename}.xlsx);
   }
 
-  $(document).ready(function () {
-    loadData();
-
-    $('#stateSummary').on('click', 'tr', function () {
-      const state = $(this).find('td:first').text();
-      $('#stateFilter').val([state]).trigger('change');
-      loadData();
-    });
-
-    $('#citySummary').on('click', 'tr', function () {
-      const city = $(this).find('td:first').text();
-      $('#cityFilter').val([city]).trigger('change');
-      loadData();
-    });
-
-    $('#distributorSummary').on('click', 'tr', function () {
-      const distributor = $(this).find('td:first').text();
-      $('#distributorFilter').val([distributor]).trigger('change');
-      loadData();
-    });
-  });
+  $(document).ready(loadData);
 </script>
-
 </body>
 </html>
