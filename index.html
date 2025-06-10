@@ -99,7 +99,7 @@
     const stateF = $('#stateFilter').val() || [];
     const distF = $('#distributorFilter').val() || [];
 
-    fetch(https://script.google.com/macros/s/AKfycbyMFLEnwplCG2dNUMTT6R6ItCUlYWP6mJS6wPNbYKIeEzdVMIyCQUKiYpMaB5DY9Ac61g/exec?from=${from}&to=${to})
+    fetch(`https://script.google.com/macros/s/AKfycbyMFLEnwplCG2dNUMTT6R6ItCUlYWP6mJS6wPNbYKIeEzdVMIyCQUKiYpMaB5DY9Ac61g/exec?from=${from}&to=${to})
       .then(r => r.json())
       .then(data => {
         const raw = data.rawData;
