@@ -10,6 +10,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
     .select2-container--default .select2-selection--multiple {
       background-color: #000 !important;
@@ -18,26 +19,31 @@
       border: 1px solid #4b5563;
       min-height: 2.5rem;
     }
+
     .select2-container--default .select2-selection--multiple .select2-selection__choice {
       background-color: #1f2937;
       color: #f9fafb;
       font-weight: 500;
       border: none;
     }
+
     .select2-dropdown {
       background-color: #000 !important;
       color: #fff !important;
       z-index: 9999;
       border: 1px solid #4b5563;
     }
+
     .select2-results__option {
       background-color: #000;
       color: #fff;
     }
+
     .select2-results__option--highlighted {
       background-color: #6366f1 !important;
       color: white !important;
     }
+
     .clickable-row {
       cursor: pointer;
     }
@@ -125,6 +131,7 @@
 
   function resetFilters() {
     appliedFilters = { state: null, city: null, distributor: null, rep: null };
+    $('#repFilter, #cityFilter, #stateFilter, #distributorFilter').val(null).trigger('change');
     loadData();
   }
 
@@ -137,15 +144,18 @@
       .then(data => {
         const raw = data.rawData;
 
-        populateFilter('#repFilter', raw.map(r => r.rep));
-        populateFilter('#cityFilter', raw.map(r => r.city));
-        populateFilter('#stateFilter', raw.map(r => r.state));
-        populateFilter('#distributorFilter', raw.map(r => r.distributor));
+        // Populate filters only if empty (first time)
+        if (!$('#repFilter').hasClass('select2-hidden-accessible')) {
+          populateFilter('#repFilter', raw.map(r => r.rep));
+          populateFilter('#cityFilter', raw.map(r => r.city));
+          populateFilter('#stateFilter', raw.map(r => r.state));
+          populateFilter('#distributorFilter', raw.map(r => r.distributor));
+        }
 
         const filtered = raw.filter(r => {
           const dt = new Date(r.billDate + 'T00:00:00');
           return (!from || dt >= new Date(from + 'T00:00:00')) &&
-                 (!to   || dt <= new Date(to + 'T23:59:59')) &&
+                 (!to || dt <= new Date(to + 'T23:59:59')) &&
                  (!appliedFilters.state || r.state === appliedFilters.state) &&
                  (!appliedFilters.city || r.city === appliedFilters.city) &&
                  (!appliedFilters.distributor || r.distributor === appliedFilters.distributor) &&
@@ -162,9 +172,6 @@
   function populateFilter(selector, list) {
     const unique = Array.from(new Set(list.sort()));
     const el = $(selector);
-    if (el.hasClass("select2-hidden-accessible")) {
-      el.select2('destroy');
-    }
     el.empty();
     unique.forEach(v => el.append(`<option>${v}</option>`));
     el.select2({ width: '100%', placeholder: 'Select' });
@@ -175,7 +182,6 @@
     Object.entries(obj).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => {
       tbody.append(`<tr class="clickable-row hover:bg-purple-700" data-type="${sel}" data-key="${k}"><td>${k}</td><td>₹${v.toLocaleString()}</td></tr>`);
     });
-
     $(sel + ' tr').off('click').on('click', function () {
       const key = $(this).data('key');
       if (sel === '#stateSummary') appliedFilters.state = key;
